@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 """
-Core dictation script for audio recording.
+Core dictation script for audio recording and transcription.
 
-This script provides audio recording capabilities for the dictation system.
-It uses sounddevice for audio capture and manages recording state via lock files.
+This script provides audio recording and speech-to-text transcription capabilities
+for the dictation system. It uses sounddevice for audio capture, faster-whisper
+for transcription, and manages recording state via lock files.
 
 Usage:
-    python3 dictate.py --start    # Begin recording
-    python3 dictate.py --stop     # Stop recording
+    python3 dictate.py --start                      # Begin recording
+    python3 dictate.py --stop                       # Stop recording
+    python3 dictate.py --transcribe <audio_file>    # Transcribe audio
 """
 
 import argparse
 import json
+import logging
 import os
 import signal
 import subprocess
@@ -32,6 +35,14 @@ except ImportError as e:
     print("  sudo pacman -S portaudio", file=sys.stderr)
     sys.exit(1)
 
+# Import faster-whisper for transcription (optional for recording-only usage)
+try:
+    from faster_whisper import WhisperModel
+    WHISPER_AVAILABLE = True
+except ImportError:
+    WHISPER_AVAILABLE = False
+    WhisperModel = None
+
 
 # Configuration constants
 LOCK_FILE = Path("/tmp/dictation.lock")
@@ -39,6 +50,142 @@ TEMP_DIR = Path("/tmp/dictation")
 SAMPLE_RATE = 16000  # Hz - Optimal for Whisper transcription
 CHANNELS = 1  # Mono audio
 DTYPE = np.int16  # 16-bit PCM
+
+# Transcription configuration
+MODEL_NAME = "base.en"  # Default Whisper model
+DEVICE = "cpu"  # CPU inference (no GPU required)
+COMPUTE_TYPE = "int8"  # Optimized for CPU performance
+MODEL_CACHE = os.path.expanduser("~/.cache/huggingface/hub/")
+
+
+def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool = False) -> str:
+    """
+    Transcribe audio file to text using faster-whisper.
+    
+    Args:
+        audio_file: Path to WAV file (16kHz, mono recommended)
+        model_name: Whisper model to use (tiny.en, base.en, small.en, medium.en)
+        verbose: Show detailed timing and progress information
+    
+    Returns:
+        Transcribed text as string
+    
+    Raises:
+        FileNotFoundError: If audio file doesn't exist
+        ImportError: If faster-whisper is not installed
+        RuntimeError: If transcription fails
+    """
+    if not WHISPER_AVAILABLE:
+        raise ImportError(
+            "faster-whisper is not installed.\n"
+            "Install it with: pip install faster-whisper\n"
+            "Or run: source scripts/setup-dev.sh dictation"
+        )
+    
+    audio_path = Path(audio_file)
+    if not audio_path.exists():
+        raise FileNotFoundError(f"Audio file not found: {audio_file}")
+    
+    if not audio_path.is_file():
+        raise FileNotFoundError(f"Path is not a file: {audio_file}")
+    
+    # Send notification that transcription is starting
+    _send_notification_static(
+        "⏳ Transcribing...",
+        "Processing your audio",
+        urgency="normal"
+    )
+    
+    start_time = time.time()
+    
+    try:
+        if verbose:
+            print(f"Loading Whisper model: {model_name}", file=sys.stderr)
+            print(f"Device: {DEVICE}, Compute type: {COMPUTE_TYPE}", file=sys.stderr)
+        
+        # Load Whisper model
+        model = WhisperModel(
+            model_size_or_path=model_name,
+            device=DEVICE,
+            compute_type=COMPUTE_TYPE,
+            cpu_threads=0,  # Use all available cores
+            num_workers=1
+        )
+        
+        load_time = time.time() - start_time
+        if verbose:
+            print(f"Model loaded in {load_time:.2f}s", file=sys.stderr)
+        
+        # Transcribe audio
+        transcribe_start = time.time()
+        segments, info = model.transcribe(
+            str(audio_path),
+            language="en",
+            beam_size=5,
+            vad_filter=True,  # Remove silence
+            vad_parameters=dict(
+                min_silence_duration_ms=500
+            )
+        )
+        
+        # Join segments into single string
+        text_parts = []
+        for segment in segments:
+            text_parts.append(segment.text)
+        
+        text = " ".join(text_parts)
+        
+        # Post-processing
+        text = text.strip()  # Remove leading/trailing whitespace
+        text = " ".join(text.split())  # Normalize internal whitespace
+        
+        transcribe_time = time.time() - transcribe_start
+        total_time = time.time() - start_time
+        
+        if verbose:
+            print(f"Transcription completed in {transcribe_time:.2f}s", file=sys.stderr)
+            print(f"Total time: {total_time:.2f}s", file=sys.stderr)
+            print(f"Detected language: {info.language} (probability: {info.language_probability:.2f})", file=sys.stderr)
+            if info.duration:
+                print(f"Audio duration: {info.duration:.2f}s", file=sys.stderr)
+                speed_ratio = info.duration / transcribe_time if transcribe_time > 0 else 0
+                print(f"Processing speed: {speed_ratio:.1f}x realtime", file=sys.stderr)
+        
+        # Send completion notification
+        _send_notification_static(
+            "✅ Transcription Complete",
+            text[:100] + ("..." if len(text) > 100 else ""),
+            urgency="normal"
+        )
+        
+        return text
+        
+    except Exception as e:
+        error_msg = f"Transcription failed: {e}"
+        _send_notification_static(
+            "❌ Transcription Error",
+            str(e),
+            urgency="critical"
+        )
+        raise RuntimeError(error_msg) from e
+
+
+def _send_notification_static(title, message, urgency="normal"):
+    """
+    Static helper function to send desktop notifications.
+    Used by transcribe_audio() which is not part of a class.
+    """
+    try:
+        subprocess.run(
+            ["notify-send", "-u", urgency, title, message],
+            check=False,
+            capture_output=True,
+        )
+    except FileNotFoundError:
+        # notify-send not available, silently ignore
+        pass
+    except Exception as e:
+        print(f"Notification error: {e}", file=sys.stderr)
 
 
 class DictationRecorder:
@@ -371,15 +518,19 @@ class DictationRecorder:
 def main():
     """Main entry point for the dictation script."""
     parser = argparse.ArgumentParser(
-        description="Core dictation script for audio recording",
+        description="Core dictation script for audio recording and transcription",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  %(prog)s --start    # Begin recording
-  %(prog)s --stop     # Stop recording and save
+  %(prog)s --start                              # Begin recording
+  %(prog)s --stop                               # Stop recording and save
+  %(prog)s --transcribe audio.wav               # Transcribe audio file
+  %(prog)s --transcribe audio.wav --model tiny.en  # Use faster model
+  %(prog)s --transcribe audio.wav --verbose     # Show timing info
 
 Lock file: /tmp/dictation.lock
 Audio files: /tmp/dictation/
+Model cache: ~/.cache/huggingface/hub/
         """
     )
 
@@ -395,19 +546,65 @@ Audio files: /tmp/dictation/
         help='Stop audio recording'
     )
 
+    parser.add_argument(
+        '--transcribe',
+        type=str,
+        metavar='FILE',
+        help='Transcribe audio file to text'
+    )
+
+    parser.add_argument(
+        '--model',
+        type=str,
+        default='base.en',
+        choices=['tiny.en', 'base.en', 'small.en', 'medium.en'],
+        help='Whisper model to use for transcription (default: base.en)'
+    )
+
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Show detailed timing and progress information'
+    )
+
     args = parser.parse_args()
 
     # Validate arguments
-    if args.start and args.stop:
-        print("Error: Cannot use --start and --stop together", file=sys.stderr)
+    if sum([args.start, args.stop, bool(args.transcribe)]) > 1:
+        print("Error: Can only use one of --start, --stop, or --transcribe", file=sys.stderr)
         parser.print_help()
         return 1
 
-    if not args.start and not args.stop:
-        print("Error: Must specify either --start or --stop", file=sys.stderr)
+    if not args.start and not args.stop and not args.transcribe:
+        print("Error: Must specify --start, --stop, or --transcribe", file=sys.stderr)
         parser.print_help()
         return 1
 
+    # Handle transcription
+    if args.transcribe:
+        try:
+            text = transcribe_audio(
+                args.transcribe,
+                model_name=args.model,
+                verbose=args.verbose
+            )
+            # Print transcribed text to stdout
+            print(text)
+            return 0
+        except FileNotFoundError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except ImportError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except RuntimeError as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        except Exception as e:
+            print(f"Error: Unexpected error during transcription: {e}", file=sys.stderr)
+            return 1
+
+    # Handle recording
     recorder = DictationRecorder()
 
     if args.start:

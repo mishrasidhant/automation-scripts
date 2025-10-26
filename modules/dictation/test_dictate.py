@@ -26,6 +26,8 @@ if 'numpy' not in sys.modules:
     mock_np.int16 = 'int16'
     mock_np.concatenate = MagicMock(return_value=MagicMock(tobytes=MagicMock(return_value=b'')))
     sys.modules['numpy'] = mock_np
+if 'faster_whisper' not in sys.modules:
+    sys.modules['faster_whisper'] = MagicMock()
 
 # Import the module under test
 sys.path.insert(0, os.path.dirname(__file__))
@@ -258,13 +260,212 @@ class TestErrorHandling(unittest.TestCase):
         os.rmdir(temp_dir)
 
 
+class TestTranscriptionFunction(unittest.TestCase):
+    """Test transcription functionality."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_audio_file = Path(self.temp_dir) / "test_audio.wav"
+        # Create a dummy audio file for testing
+        self.test_audio_file.touch()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if self.test_audio_file.exists():
+            self.test_audio_file.unlink()
+        if Path(self.temp_dir).exists():
+            os.rmdir(self.temp_dir)
+
+    def test_transcribe_missing_file(self):
+        """Test that transcription fails gracefully with missing file."""
+        nonexistent_file = Path(self.temp_dir) / "nonexistent.wav"
+        
+        with patch.object(dictate, 'WHISPER_AVAILABLE', True):
+            with self.assertRaises(FileNotFoundError):
+                dictate.transcribe_audio(str(nonexistent_file))
+
+    def test_transcribe_without_whisper_installed(self):
+        """Test that transcription fails when faster-whisper not installed."""
+        with patch.object(dictate, 'WHISPER_AVAILABLE', False):
+            with self.assertRaises(ImportError) as context:
+                dictate.transcribe_audio(str(self.test_audio_file))
+            
+            self.assertIn("faster-whisper", str(context.exception))
+
+    @patch('dictate.WhisperModel')
+    @patch('dictate._send_notification_static')
+    def test_transcribe_success(self, mock_notify, mock_whisper_model):
+        """Test successful transcription."""
+        # Mock the transcription result
+        mock_segment_1 = MagicMock()
+        mock_segment_1.text = "This is a test."
+        mock_segment_2 = MagicMock()
+        mock_segment_2.text = "Another sentence."
+        
+        mock_info = MagicMock()
+        mock_info.language = "en"
+        mock_info.language_probability = 0.98
+        mock_info.duration = 5.0
+        
+        mock_model_instance = MagicMock()
+        mock_model_instance.transcribe.return_value = (
+            [mock_segment_1, mock_segment_2],
+            mock_info
+        )
+        mock_whisper_model.return_value = mock_model_instance
+        
+        with patch.object(dictate, 'WHISPER_AVAILABLE', True):
+            result = dictate.transcribe_audio(str(self.test_audio_file))
+        
+        self.assertEqual(result, "This is a test. Another sentence.")
+        mock_whisper_model.assert_called_once()
+        # Check notifications were sent (start and completion)
+        self.assertEqual(mock_notify.call_count, 2)
+
+    @patch('dictate.WhisperModel')
+    @patch('dictate._send_notification_static')
+    def test_transcribe_with_model_selection(self, mock_notify, mock_whisper_model):
+        """Test transcription with different model selection."""
+        mock_segment = MagicMock()
+        mock_segment.text = "Test"
+        mock_info = MagicMock()
+        mock_info.language = "en"
+        mock_info.language_probability = 0.99
+        mock_info.duration = 2.0
+        
+        mock_model_instance = MagicMock()
+        mock_model_instance.transcribe.return_value = ([mock_segment], mock_info)
+        mock_whisper_model.return_value = mock_model_instance
+        
+        with patch.object(dictate, 'WHISPER_AVAILABLE', True):
+            result = dictate.transcribe_audio(str(self.test_audio_file), model_name="tiny.en")
+        
+        # Verify correct model was requested
+        call_kwargs = mock_whisper_model.call_args[1]
+        self.assertEqual(call_kwargs['model_size_or_path'], "tiny.en")
+        self.assertEqual(result, "Test")
+
+    @patch('dictate.WhisperModel')
+    @patch('dictate._send_notification_static')
+    def test_transcribe_empty_audio(self, mock_notify, mock_whisper_model):
+        """Test transcription of silent/empty audio."""
+        # Mock empty transcription result
+        mock_info = MagicMock()
+        mock_info.language = "en"
+        mock_info.language_probability = 0.5
+        mock_info.duration = 1.0
+        
+        mock_model_instance = MagicMock()
+        mock_model_instance.transcribe.return_value = ([], mock_info)
+        mock_whisper_model.return_value = mock_model_instance
+        
+        with patch.object(dictate, 'WHISPER_AVAILABLE', True):
+            result = dictate.transcribe_audio(str(self.test_audio_file))
+        
+        self.assertEqual(result, "")
+
+    @patch('dictate.WhisperModel', side_effect=Exception("Model load failed"))
+    @patch('dictate._send_notification_static')
+    def test_transcribe_model_load_failure(self, mock_notify, mock_whisper_model):
+        """Test transcription handles model loading errors."""
+        with patch.object(dictate, 'WHISPER_AVAILABLE', True):
+            with self.assertRaises(RuntimeError):
+                dictate.transcribe_audio(str(self.test_audio_file))
+        
+        # Verify error notification was sent
+        error_calls = [call for call in mock_notify.call_args_list if "Error" in str(call)]
+        self.assertGreater(len(error_calls), 0)
+
+
+class TestTranscriptionCLI(unittest.TestCase):
+    """Test transcription command-line interface."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_audio_file = Path(self.temp_dir) / "test.wav"
+        self.test_audio_file.touch()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if self.test_audio_file.exists():
+            self.test_audio_file.unlink()
+        if Path(self.temp_dir).exists():
+            os.rmdir(self.temp_dir)
+
+    @patch('dictate.transcribe_audio', return_value="Transcribed text")
+    def test_transcribe_cli_argument(self, mock_transcribe):
+        """Test that --transcribe argument calls transcribe_audio."""
+        with patch('sys.argv', ['dictate.py', '--transcribe', str(self.test_audio_file)]):
+            result = dictate.main()
+        
+        mock_transcribe.assert_called_once()
+        self.assertEqual(result, 0)
+
+    @patch('dictate.transcribe_audio', return_value="Test output")
+    def test_transcribe_with_model_option(self, mock_transcribe):
+        """Test --transcribe with --model option."""
+        with patch('sys.argv', ['dictate.py', '--transcribe', str(self.test_audio_file), '--model', 'tiny.en']):
+            result = dictate.main()
+        
+        call_kwargs = mock_transcribe.call_args[1]
+        self.assertEqual(call_kwargs['model_name'], 'tiny.en')
+        self.assertEqual(result, 0)
+
+    @patch('dictate.transcribe_audio', return_value="Verbose test")
+    def test_transcribe_with_verbose_option(self, mock_transcribe):
+        """Test --transcribe with --verbose option."""
+        with patch('sys.argv', ['dictate.py', '--transcribe', str(self.test_audio_file), '--verbose']):
+            result = dictate.main()
+        
+        call_kwargs = mock_transcribe.call_args[1]
+        self.assertTrue(call_kwargs['verbose'])
+        self.assertEqual(result, 0)
+
+    def test_conflicting_transcribe_and_start(self):
+        """Test that --transcribe and --start together shows error."""
+        with patch('sys.argv', ['dictate.py', '--start', '--transcribe', str(self.test_audio_file)]):
+            result = dictate.main()
+            self.assertEqual(result, 1)
+
+    @patch('dictate.transcribe_audio', side_effect=FileNotFoundError("File not found"))
+    def test_transcribe_cli_file_not_found(self, mock_transcribe):
+        """Test CLI handles file not found error."""
+        with patch('sys.argv', ['dictate.py', '--transcribe', 'nonexistent.wav']):
+            result = dictate.main()
+        
+        self.assertEqual(result, 1)
+
+
+class TestTranscriptionConfiguration(unittest.TestCase):
+    """Test transcription configuration constants."""
+
+    def test_default_model_is_base_en(self):
+        """Test that default model is base.en for balanced performance."""
+        self.assertEqual(dictate.MODEL_NAME, "base.en")
+
+    def test_device_is_cpu(self):
+        """Test that default device is CPU (no GPU required)."""
+        self.assertEqual(dictate.DEVICE, "cpu")
+
+    def test_compute_type_optimized(self):
+        """Test that compute type is int8 for CPU optimization."""
+        self.assertEqual(dictate.COMPUTE_TYPE, "int8")
+
+    def test_model_cache_location(self):
+        """Test that model cache points to huggingface hub."""
+        cache_path = dictate.MODEL_CACHE
+        self.assertIn(".cache/huggingface", cache_path)
+
+
 def run_tests():
     """Run all tests."""
     print("=" * 70)
     print("Running Unit Tests for dictate.py")
     print("=" * 70)
     print("\nNote: Full integration tests require:")
-    print("  pip install sounddevice numpy")
+    print("  pip install sounddevice numpy faster-whisper")
     print("  sudo pacman -S portaudio")
     print()
     
@@ -277,6 +478,9 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestCLIArguments))
     suite.addTests(loader.loadTestsFromTestCase(TestNotifications))
     suite.addTests(loader.loadTestsFromTestCase(TestErrorHandling))
+    suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionFunction))
+    suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionCLI))
+    suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionConfiguration))
     
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
