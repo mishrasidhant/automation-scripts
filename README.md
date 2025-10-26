@@ -1,4 +1,4 @@
-# ⚙️ systemd-automations
+# ⚙️ automation-scripts
 
 A modular monorepo for managing **system-level automation scripts** and their corresponding `systemd` services.  
 Each automation is **self-contained** — it can exist independently or be linked with a `systemd` unit when ready for deployment.
@@ -7,7 +7,7 @@ Each automation is **self-contained** — it can exist independently or be linke
 
 ## 🧩 Architecture Overview
 
-systemd-automations/
+automation-scripts/
 ├── README.md # Repository overview and module design guide
 │
 ├── modules/ # Independent automation modules
@@ -50,7 +50,7 @@ systemd-automations/
 
 ## 🧱 Repository Purpose
 
-`systemd-automations` is designed to:
+`automation-scripts` is designed to:
 
 - Serve as a **single home** for automation scripts, services, and timers.
 - Keep **modules decoupled** — each one works standalone or under systemd.
@@ -141,11 +141,24 @@ Each module remains **self-contained** and **independent** of others until expli
 
 ## 📦 Setup
 
+### Quick Start
+
 ```bash
-git clone https://github.com/<your-username>/systemd-automations.git
-cd systemd-automations
-./scripts/setup-services.sh
+# Clone repository
+git clone https://github.com/mishrasidhant/automation-scripts.git
+cd automation-scripts
+
+# Set environment variable
+export AUTOMATION_SCRIPTS_DIR="$(pwd)"
+
+# Add to your shell profile for persistence
+echo "export AUTOMATION_SCRIPTS_DIR=\"$HOME/path/to/automation-scripts\"" >> ~/.bashrc
+
+# Setup development environment
+source scripts/setup-dev.sh dictation
 ```
+
+For complete setup instructions, see [ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md).
 
 You can now manage modules individually:
 

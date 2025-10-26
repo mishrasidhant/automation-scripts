@@ -240,7 +240,7 @@ EOF
 Before implementation, create the module structure:
 
 ```bash
-cd /home/sdx/Files/W/Workspace/git/automation/systemd-automations
+cd $HOME/Files/W/Workspace/git/automation/automation-scripts
 
 # Create module directory
 mkdir -p modules/dictation/config
@@ -276,7 +276,7 @@ echo "DISPLAY: $DISPLAY"
 
 # Verify X authority
 echo "XAUTHORITY: $XAUTHORITY"
-# Expected: /home/sdx/.Xauthority
+# Expected: $HOME/.Xauthority
 
 # Verify desktop session
 echo "XDG_SESSION_TYPE: $XDG_SESSION_TYPE"
@@ -407,7 +407,7 @@ Once all checkboxes are complete:
 - Blue Microphones detected as device index 2
 - PulseAudio latency: default (good for speech)
 - XFCE version: 4.18
-- Python user packages location: /home/sdx/.local/lib/python3.13/site-packages
+- Python user packages location: $HOME/.local/lib/python3.13/site-packages
 ```
 
 ---

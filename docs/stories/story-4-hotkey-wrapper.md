@@ -323,7 +323,7 @@ WHISPER_TEMPERATURE=0.0
 xfconf-query -c xfce4-keyboard-shortcuts \
   -p "/commands/custom/<Primary>apostrophe" \
   -n -t string \
-  -s "/home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh"
+  -s "$HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh"
 
 # Explanation:
 # <Primary> = Ctrl in XFCE notation
@@ -375,7 +375,7 @@ xfconf-query -c xfce4-keyboard-shortcuts \
 
 1. **Direct Execution Test**
    ```bash
-   cd /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation
+   cd $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation
    ./dictation-toggle.sh
    # Should start recording (notification shown)
    ./dictation-toggle.sh
@@ -385,7 +385,7 @@ xfconf-query -c xfce4-keyboard-shortcuts \
 2. **Path Resolution Test**
    ```bash
    cd /tmp
-   /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh
+   $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh
    # Should work from different directory
    ```
 
@@ -405,7 +405,7 @@ xfconf-query -c xfce4-keyboard-shortcuts \
    xfconf-query -c xfce4-keyboard-shortcuts \
      -p "/commands/custom/<Primary>apostrophe" \
      -n -t string \
-     -s "/home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh"
+     -s "$HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh"
    
    # Press Ctrl+' (should start recording)
    # Press Ctrl+' again (should transcribe and paste)
@@ -466,7 +466,7 @@ All dependencies for this story are already satisfied.
 
 ```bash
 # Manual execution (for testing)
-$ /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh
+$ $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh
 🎙️ Recording started...
 
 # (Speak)

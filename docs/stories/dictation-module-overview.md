@@ -17,7 +17,7 @@ Implement a complete voice-to-text dictation system for Manjaro Linux + XFCE tha
 
 ### Existing System Integration
 
-- **Project:** systemd-automations (automation tooling for Linux)
+- **Project:** automation-scripts (automation tooling for Linux)
 - **Technology Stack:** Python 3.13.7, Bash, systemd, XFCE
 - **Target System:** Manjaro Linux, XFCE, X11, PulseAudio
 - **Architecture Status:** ✅ Fully designed (see DICTATION_ARCHITECTURE.md)
@@ -130,7 +130,7 @@ modules/dictation/
 ## Compatibility & Risk
 
 ### Compatibility Requirements
-- ✅ No changes to existing systemd-automations functionality
+- ✅ No changes to existing automation-scripts functionality
 - ✅ Self-contained module (can be enabled/disabled independently)
 - ✅ No root/sudo required for normal operation
 - ✅ Works with existing system tools (XFCE, PulseAudio, X11)
@@ -156,7 +156,7 @@ Epic is complete when:
 - ✅ Setup script successfully installs dependencies
 - ✅ Documentation covers installation and usage
 - ✅ Performance meets latency targets (<3s overhead)
-- ✅ No regression in existing systemd-automations functionality
+- ✅ No regression in existing automation-scripts functionality
 
 ---
 

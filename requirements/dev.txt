@@ -1,0 +1,20 @@
+# Development and Testing Tools
+
+# Testing frameworks
+pytest>=7.4.0           # Test framework
+pytest-cov>=4.1.0       # Coverage reporting
+pytest-mock>=3.11.0     # Mocking utilities
+
+# Code quality
+black>=23.0.0           # Code formatter
+flake8>=6.0.0           # Linter
+mypy>=1.5.0             # Type checker
+isort>=5.12.0           # Import sorter
+
+# Development utilities
+ipython>=8.15.0         # Enhanced REPL
+pdbpp>=0.10.3           # Better debugger
+
+# Include all module dependencies for comprehensive testing
+-r all.txt
+

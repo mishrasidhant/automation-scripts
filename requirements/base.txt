@@ -1,0 +1,11 @@
+# Base Requirements
+# Shared dependencies across all automation modules
+
+# Currently empty - keep this minimal
+# Only add dependencies that are truly universal across 3+ modules
+
+# Future examples:
+# - Common logging libraries
+# - Shared configuration parsers
+# - Custom utility packages
+

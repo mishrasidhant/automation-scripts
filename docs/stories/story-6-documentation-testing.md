@@ -283,7 +283,7 @@ This module enables system-wide voice dictation on Manjaro Linux + XFCE. Press a
 ### 1. Install
 
 ```bash
-cd /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation
+cd $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation
 ./setup.sh
 ```
 

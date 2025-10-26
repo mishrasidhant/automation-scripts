@@ -1,2 +1,47 @@
+# Bmad
 .bmad-core/
 .cursor/
+
+# Python virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary dictation files (development)
+/tmp/dictation/
+
+# Logs
+*.log
+
+# Environment variables (local configuration)
+.env
+.env.local
+# Keep the template
+!.env.example

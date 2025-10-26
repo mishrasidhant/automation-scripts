@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines the complete architecture for the **dictation module** in systemd-automations. The module enables voice-to-text transcription using Whisper AI with system-wide hotkey triggering.
+This document outlines the complete architecture for the **dictation module** in automation-scripts. The module enables voice-to-text transcription using Whisper AI with system-wide hotkey triggering.
 
 **System Profile:** Manjaro Linux | XFCE | X11 | PulseAudio
 
@@ -250,7 +250,7 @@ XFCE has built-in keyboard shortcut management - no extra daemon needed!
 ```
 1. Open: Settings → Keyboard → Application Shortcuts
 2. Click "Add" button
-3. Command: /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh
+3. Command: $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh
 4. Press your desired key combination (e.g., Ctrl+Alt+Space)
 ```
 
@@ -258,7 +258,7 @@ XFCE has built-in keyboard shortcut management - no extra daemon needed!
 ```bash
 # Add shortcut via xfconf-query
 xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Primary><Alt>space" \
-  -n -t string -s "/home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh"
+  -n -t string -s "$HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh"
 ```
 
 **Pros:** 
@@ -424,7 +424,7 @@ The setup script will offer to register the hotkey automatically.
 xfconf-query -c xfce4-keyboard-shortcuts \
   -p "/commands/custom/<Primary><Alt>space" \
   -n -t string \
-  -s "/home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh"
+  -s "$HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh"
 
 # Or use GUI: Settings → Keyboard → Application Shortcuts
 ```
@@ -653,7 +653,7 @@ sudo pacman -S xdotool libnotify portaudio
 pip install sounddevice faster-whisper
 
 # 3. Navigate to module directory (once created)
-cd /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation
+cd $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation
 
 # 4. Run setup script
 ./setup.sh
@@ -665,7 +665,7 @@ cd /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictat
 
 # 6. Configure XFCE hotkey (via GUI)
 # Settings → Keyboard → Application Shortcuts → Add
-# Command: /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh
+# Command: $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh
 # Key: Ctrl+Alt+Space
 ```
 

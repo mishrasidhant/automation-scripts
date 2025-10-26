@@ -323,7 +323,7 @@ WHISPER_TEMPERATURE=0.0
 xfconf-query -c xfce4-keyboard-shortcuts \
   -p "/commands/custom/<Primary>apostrophe" \
   -n -t string \
-  -s "/home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh"
+  -s "$HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh"
 ```
 
 **Note:** `<Primary>` = Ctrl in XFCE notation

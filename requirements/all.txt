@@ -1,0 +1,10 @@
+# Complete Installation - All Modules
+# Install all module dependencies for full project setup
+
+# Current modules
+-r dictation.txt
+
+# Future modules
+# -r backup.txt
+# -r monitoring.txt
+

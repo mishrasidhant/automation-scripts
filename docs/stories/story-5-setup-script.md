@@ -491,7 +491,7 @@ All tools needed for setup script are already on the system.
 
 ```bash
 # Interactive installation
-$ cd /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation
+$ cd $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation
 $ ./setup.sh
 
 Dictation Module Setup
@@ -530,7 +530,7 @@ Collecting sounddevice...
 
 Creating directories...
 ✓ Created /tmp/dictation/
-✓ Created /home/sdx/.local/share/dictation/
+✓ Created $HOME/.local/share/dictation/
 
 Setting permissions...
 ✓ dictation-toggle.sh is executable

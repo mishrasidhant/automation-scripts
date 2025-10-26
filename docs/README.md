@@ -1,6 +1,6 @@
 # 📚 Documentation Index
 
-Welcome to the systemd-automations documentation!
+Welcome to the automation-scripts documentation!
 
 ---
 
@@ -181,7 +181,7 @@ re-run system detection and update relevant documents.
 ## 🗂️ Repository Structure
 
 ```
-systemd-automations/
+automation-scripts/
 ├── README.md                    # Repository overview
 ├── docs/                        # ← You are here
 │   ├── README.md                # This document

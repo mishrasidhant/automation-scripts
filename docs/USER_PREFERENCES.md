@@ -19,7 +19,7 @@ XFCE Command Path: <Primary>apostrophe
 xfconf-query -c xfce4-keyboard-shortcuts \
   -p "/commands/custom/<Primary>apostrophe" \
   -n -t string \
-  -s "/home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation/dictation-toggle.sh"
+  -s "$HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh"
 ```
 
 ### Whisper Model
@@ -211,7 +211,7 @@ Memory Usage: ~400MB
 
 ```
 Workspace Root:
-/home/sdx/Files/W/Workspace/git/automation/systemd-automations/
+$HOME/Files/W/Workspace/git/automation/automation-scripts/
 
 Module Directory:
 modules/dictation/
@@ -252,7 +252,7 @@ ls -la /tmp/dictation.lock
 tail -f ~/.local/share/dictation/dictation.log
 
 # Test without hotkey
-cd /home/sdx/Files/W/Workspace/git/automation/systemd-automations/modules/dictation
+cd $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation
 ./dictation-toggle.sh
 ```
 
