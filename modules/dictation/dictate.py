@@ -9,6 +9,7 @@ for transcription, and manages recording state via lock files.
 Usage:
     python3 dictate.py --start                      # Begin recording
     python3 dictate.py --stop                       # Stop recording
+    python3 dictate.py --toggle                     # Toggle: start if idle, stop+paste if recording
     python3 dictate.py --transcribe <audio_file>    # Transcribe audio
 """
 
@@ -56,6 +57,10 @@ MODEL_NAME = "base.en"  # Default Whisper model
 DEVICE = "cpu"  # CPU inference (no GPU required)
 COMPUTE_TYPE = "int8"  # Optimized for CPU performance
 MODEL_CACHE = os.path.expanduser("~/.cache/huggingface/hub/")
+
+# Text injection configuration
+XDOTOOL_DELAY_MS = 12  # Milliseconds between keystrokes (balance speed vs reliability)
+DEBUG_MODE = os.environ.get("DICTATION_DEBUG", "").lower() in ("1", "true", "yes")
 
 
 def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool = False) -> str:
@@ -186,6 +191,102 @@ def _send_notification_static(title, message, urgency="normal"):
         pass
     except Exception as e:
         print(f"Notification error: {e}", file=sys.stderr)
+
+
+def paste_text_xdotool(text: str) -> bool:
+    """
+    Inject text at cursor position using xdotool.
+    
+    Args:
+        text: Text to type at cursor position
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    if not text:
+        return False
+        
+    try:
+        # Clear any stuck modifier keys (Ctrl, Alt, Shift)
+        subprocess.run(
+            ["xdotool", "keyup", "Control_L", "Alt_L", "Shift_L"],
+            check=False,
+            capture_output=True,
+            timeout=5
+        )
+        
+        # Small delay to ensure keys are released
+        time.sleep(0.05)
+        
+        # Type the text
+        # --clearmodifiers: ensure no modifiers interfere
+        # --delay: milliseconds between keystrokes
+        # --: end of options, everything after is literal text
+        result = subprocess.run(
+            ["xdotool", "type", "--clearmodifiers", "--delay", str(XDOTOOL_DELAY_MS), "--", text],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        return True
+        
+    except subprocess.TimeoutExpired:
+        _send_notification_static("❌ Dictation Error", "Text pasting timed out", urgency="critical")
+        return False
+    except FileNotFoundError:
+        _send_notification_static("❌ Dictation Error", "xdotool not installed. Install with: sudo pacman -S xdotool", urgency="critical")
+        return False
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr if e.stderr else "Unknown error"
+        _send_notification_static("❌ Dictation Error", f"xdotool failed: {error_msg}", urgency="critical")
+        return False
+    except Exception as e:
+        _send_notification_static("❌ Dictation Error", f"Text injection error: {e}", urgency="critical")
+        return False
+
+
+def copy_to_clipboard(text: str) -> bool:
+    """
+    Copy text to clipboard as fallback when xdotool fails.
+    
+    Args:
+        text: Text to copy to clipboard
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    if not text:
+        return False
+        
+    try:
+        # Try xclip first (most common)
+        subprocess.run(
+            ["xclip", "-selection", "clipboard"],
+            input=text.encode('utf-8'),
+            check=True,
+            capture_output=True,
+            timeout=5
+        )
+        return True
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Try xsel as fallback
+        try:
+            subprocess.run(
+                ["xsel", "--clipboard", "--input"],
+                input=text.encode('utf-8'),
+                check=True,
+                capture_output=True,
+                timeout=5
+            )
+            return True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # No clipboard tool available
+            return False
+    except subprocess.TimeoutExpired:
+        return False
+    except Exception:
+        return False
 
 
 class DictationRecorder:
@@ -515,6 +616,178 @@ class DictationRecorder:
             sys.exit(1)
 
 
+def cleanup_stale_lock():
+    """Clean up stale lock file (from crashed process)."""
+    try:
+        if LOCK_FILE.exists():
+            LOCK_FILE.unlink()
+            print("Cleaned up stale lock file", file=sys.stderr)
+    except Exception as e:
+        print(f"Warning: Could not clean up lock file: {e}", file=sys.stderr)
+
+
+def read_lock_file():
+    """
+    Read and parse lock file.
+    
+    Returns:
+        dict: Lock file data, or None if file doesn't exist or is invalid
+    """
+    if not LOCK_FILE.exists():
+        return None
+        
+    try:
+        with open(LOCK_FILE, 'r') as f:
+            return json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Warning: Invalid lock file: {e}", file=sys.stderr)
+        return None
+
+
+def is_process_running(pid):
+    """
+    Check if a process with given PID is running.
+    
+    Args:
+        pid: Process ID to check
+        
+    Returns:
+        bool: True if process exists, False otherwise
+    """
+    try:
+        os.kill(pid, 0)
+        return True
+    except (OSError, ProcessLookupError):
+        return False
+
+
+def handle_toggle():
+    """
+    Handle toggle command: start if idle, stop+transcribe+paste if recording.
+    
+    Returns:
+        int: Exit code (0 for success, non-zero for error)
+    """
+    lock_data = read_lock_file()
+    
+    if lock_data:
+        # Currently recording - stop and process
+        pid = lock_data.get('pid')
+        audio_file = lock_data.get('audio_file')
+        
+        # Verify process is still running
+        if pid and not is_process_running(pid):
+            _send_notification_static(
+                "🔧 Dictation",
+                "Cleaning up stale recording session...",
+                urgency="normal"
+            )
+            cleanup_stale_lock()
+            return 0
+        
+        # Stop the recording
+        recorder = DictationRecorder()
+        stop_result = recorder.stop_recording()
+        
+        if stop_result != 0:
+            _send_notification_static(
+                "❌ Dictation Error",
+                "Failed to stop recording",
+                urgency="critical"
+            )
+            return stop_result
+        
+        # Wait briefly for file to be written
+        time.sleep(0.2)
+        
+        # Verify audio file exists
+        if not audio_file or not Path(audio_file).exists():
+            _send_notification_static(
+                "❌ Dictation Error",
+                "Audio file not found",
+                urgency="critical"
+            )
+            cleanup_stale_lock()
+            return 1
+        
+        # Transcribe audio
+        try:
+            _send_notification_static(
+                "⏳ Dictation",
+                "Transcribing...",
+                urgency="normal"
+            )
+            
+            text = transcribe_audio(audio_file, verbose=False)
+            
+            if not text or not text.strip():
+                _send_notification_static(
+                    "⚠️ Dictation",
+                    "No speech detected",
+                    urgency="normal"
+                )
+                # Clean up
+                cleanup_stale_lock()
+                if not DEBUG_MODE and Path(audio_file).exists():
+                    Path(audio_file).unlink()
+                return 0
+            
+            # Paste text
+            word_count = len(text.split())
+            _send_notification_static(
+                "📝 Dictation",
+                f"Pasting {word_count} words...",
+                urgency="normal"
+            )
+            
+            if paste_text_xdotool(text):
+                _send_notification_static(
+                    "✅ Dictation",
+                    f"Done! Pasted {word_count} words",
+                    urgency="normal"
+                )
+            else:
+                # Fallback to clipboard
+                if copy_to_clipboard(text):
+                    _send_notification_static(
+                        "⚠️ Dictation",
+                        f"Text copied to clipboard ({word_count} words)\nPaste manually with Ctrl+V",
+                        urgency="normal"
+                    )
+                else:
+                    # Last resort: show in notification
+                    preview = text[:100] + ("..." if len(text) > 100 else "")
+                    _send_notification_static(
+                        "⚠️ Dictation",
+                        f"Could not paste or copy to clipboard.\nText: {preview}",
+                        urgency="critical"
+                    )
+            
+            # Clean up
+            cleanup_stale_lock()
+            if not DEBUG_MODE and Path(audio_file).exists():
+                try:
+                    Path(audio_file).unlink()
+                except Exception as e:
+                    print(f"Warning: Could not delete audio file: {e}", file=sys.stderr)
+            
+            return 0
+            
+        except Exception as e:
+            error_msg = str(e)
+            _send_notification_static(
+                "❌ Dictation Error",
+                f"Transcription failed: {error_msg}",
+                urgency="critical"
+            )
+            cleanup_stale_lock()
+            return 1
+    else:
+        # Not recording - start recording
+        recorder = DictationRecorder()
+        return recorder.start_recording()
+
+
 def main():
     """Main entry point for the dictation script."""
     parser = argparse.ArgumentParser(
@@ -524,6 +797,7 @@ def main():
 Examples:
   %(prog)s --start                              # Begin recording
   %(prog)s --stop                               # Stop recording and save
+  %(prog)s --toggle                             # Toggle: start if idle, stop+paste if recording
   %(prog)s --transcribe audio.wav               # Transcribe audio file
   %(prog)s --transcribe audio.wav --model tiny.en  # Use faster model
   %(prog)s --transcribe audio.wav --verbose     # Show timing info
@@ -531,6 +805,9 @@ Examples:
 Lock file: /tmp/dictation.lock
 Audio files: /tmp/dictation/
 Model cache: ~/.cache/huggingface/hub/
+
+Environment Variables:
+  DICTATION_DEBUG=1                             # Keep audio files after transcription
         """
     )
 
@@ -544,6 +821,12 @@ Model cache: ~/.cache/huggingface/hub/
         '--stop',
         action='store_true',
         help='Stop audio recording'
+    )
+
+    parser.add_argument(
+        '--toggle',
+        action='store_true',
+        help='Toggle mode: start if idle, stop and paste text if recording'
     )
 
     parser.add_argument(
@@ -570,13 +853,13 @@ Model cache: ~/.cache/huggingface/hub/
     args = parser.parse_args()
 
     # Validate arguments
-    if sum([args.start, args.stop, bool(args.transcribe)]) > 1:
-        print("Error: Can only use one of --start, --stop, or --transcribe", file=sys.stderr)
+    if sum([args.start, args.stop, args.toggle, bool(args.transcribe)]) > 1:
+        print("Error: Can only use one of --start, --stop, --toggle, or --transcribe", file=sys.stderr)
         parser.print_help()
         return 1
 
-    if not args.start and not args.stop and not args.transcribe:
-        print("Error: Must specify --start, --stop, or --transcribe", file=sys.stderr)
+    if not args.start and not args.stop and not args.toggle and not args.transcribe:
+        print("Error: Must specify --start, --stop, --toggle, or --transcribe", file=sys.stderr)
         parser.print_help()
         return 1
 
@@ -603,6 +886,10 @@ Model cache: ~/.cache/huggingface/hub/
         except Exception as e:
             print(f"Error: Unexpected error during transcription: {e}", file=sys.stderr)
             return 1
+
+    # Handle toggle mode
+    if args.toggle:
+        return handle_toggle()
 
     # Handle recording
     recorder = DictationRecorder()

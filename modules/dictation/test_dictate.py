@@ -11,6 +11,7 @@ Run with: python3 test_dictate.py
 
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import time
@@ -459,6 +460,203 @@ class TestTranscriptionConfiguration(unittest.TestCase):
         self.assertIn(".cache/huggingface", cache_path)
 
 
+class TestTextInjection(unittest.TestCase):
+    """Test text injection and clipboard functionality."""
+
+    @patch('dictate.subprocess.run')
+    def test_paste_text_xdotool_success(self, mock_run):
+        """Test successful text pasting with xdotool."""
+        mock_run.return_value = MagicMock(returncode=0)
+        
+        result = dictate.paste_text_xdotool("Test text")
+        
+        self.assertTrue(result)
+        # Should call keyup first, then type
+        self.assertEqual(mock_run.call_count, 2)
+        
+        # Verify xdotool type was called with correct arguments
+        type_call = mock_run.call_args_list[1]
+        self.assertIn("xdotool", type_call[0][0])
+        self.assertIn("type", type_call[0][0])
+        self.assertIn("Test text", type_call[0][0])
+
+    @patch('dictate.subprocess.run', side_effect=FileNotFoundError)
+    @patch('dictate._send_notification_static')
+    def test_paste_text_xdotool_not_installed(self, mock_notify, mock_run):
+        """Test that missing xdotool is handled gracefully."""
+        result = dictate.paste_text_xdotool("Test text")
+        
+        self.assertFalse(result)
+        # Should notify user about missing xdotool
+        mock_notify.assert_called()
+        call_args = mock_notify.call_args[0]
+        self.assertIn("xdotool", str(call_args))
+
+    def test_paste_text_xdotool_empty_text(self):
+        """Test that empty text returns False."""
+        result = dictate.paste_text_xdotool("")
+        self.assertFalse(result)
+        
+        result = dictate.paste_text_xdotool(None)
+        self.assertFalse(result)
+
+    @patch('dictate.subprocess.run')
+    def test_copy_to_clipboard_xclip_success(self, mock_run):
+        """Test clipboard copy with xclip."""
+        mock_run.return_value = MagicMock(returncode=0)
+        
+        result = dictate.copy_to_clipboard("Test text")
+        
+        self.assertTrue(result)
+        call_args = mock_run.call_args[0][0]
+        self.assertIn("xclip", call_args)
+
+    @patch('dictate.subprocess.run', side_effect=[
+        subprocess.CalledProcessError(1, 'xclip'),
+        MagicMock(returncode=0)
+    ])
+    def test_copy_to_clipboard_xsel_fallback(self, mock_run):
+        """Test clipboard copy falls back to xsel if xclip fails."""
+        result = dictate.copy_to_clipboard("Test text")
+        
+        self.assertTrue(result)
+        # Should have tried both xclip and xsel
+        self.assertEqual(mock_run.call_count, 2)
+        
+        # Second call should be xsel
+        xsel_call = mock_run.call_args[0][0]
+        self.assertIn("xsel", xsel_call)
+
+    @patch('dictate.subprocess.run', side_effect=[
+        FileNotFoundError,
+        FileNotFoundError
+    ])
+    def test_copy_to_clipboard_no_tools_available(self, mock_run):
+        """Test clipboard copy fails gracefully when no tools available."""
+        result = dictate.copy_to_clipboard("Test text")
+        
+        self.assertFalse(result)
+
+
+class TestToggleMode(unittest.TestCase):
+    """Test toggle mode functionality."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.temp_dir = tempfile.mkdtemp()
+        self.test_lock_file = Path(self.temp_dir) / "test.lock"
+        self.test_audio_file = Path(self.temp_dir) / "test.wav"
+        self.test_audio_file.touch()
+
+    def tearDown(self):
+        """Clean up test fixtures."""
+        if self.test_audio_file.exists():
+            self.test_audio_file.unlink()
+        if self.test_lock_file.exists():
+            self.test_lock_file.unlink()
+        if Path(self.temp_dir).exists():
+            os.rmdir(self.temp_dir)
+
+    def test_read_lock_file_valid(self):
+        """Test reading valid lock file."""
+        lock_data = {"pid": 12345, "audio_file": "/tmp/test.wav"}
+        with open(self.test_lock_file, 'w') as f:
+            json.dump(lock_data, f)
+        
+        with patch.object(dictate, 'LOCK_FILE', self.test_lock_file):
+            result = dictate.read_lock_file()
+        
+        self.assertIsNotNone(result)
+        self.assertEqual(result['pid'], 12345)
+
+    def test_read_lock_file_missing(self):
+        """Test reading non-existent lock file."""
+        with patch.object(dictate, 'LOCK_FILE', self.test_lock_file):
+            result = dictate.read_lock_file()
+        
+        self.assertIsNone(result)
+
+    def test_read_lock_file_invalid_json(self):
+        """Test reading corrupted lock file."""
+        with open(self.test_lock_file, 'w') as f:
+            f.write("invalid json{{{")
+        
+        with patch.object(dictate, 'LOCK_FILE', self.test_lock_file):
+            result = dictate.read_lock_file()
+        
+        self.assertIsNone(result)
+
+    def test_is_process_running_current(self):
+        """Test checking if current process is running."""
+        current_pid = os.getpid()
+        result = dictate.is_process_running(current_pid)
+        self.assertTrue(result)
+
+    def test_is_process_running_invalid(self):
+        """Test checking invalid process ID."""
+        result = dictate.is_process_running(999999)
+        self.assertFalse(result)
+
+    def test_cleanup_stale_lock(self):
+        """Test cleaning up stale lock file."""
+        self.test_lock_file.touch()
+        
+        with patch.object(dictate, 'LOCK_FILE', self.test_lock_file):
+            dictate.cleanup_stale_lock()
+        
+        self.assertFalse(self.test_lock_file.exists())
+
+    @patch('dictate.DictationRecorder.start_recording', return_value=0)
+    def test_handle_toggle_start_when_idle(self, mock_start):
+        """Test toggle starts recording when idle."""
+        with patch.object(dictate, 'LOCK_FILE', self.test_lock_file):
+            result = dictate.handle_toggle()
+        
+        mock_start.assert_called_once()
+        self.assertEqual(result, 0)
+
+    @patch('dictate.is_process_running', return_value=False)
+    @patch('dictate.cleanup_stale_lock')
+    @patch('dictate._send_notification_static')
+    def test_handle_toggle_cleans_stale_lock(self, mock_notify, mock_cleanup, mock_running):
+        """Test toggle cleans up stale lock file."""
+        # Create stale lock file
+        lock_data = {"pid": 99999, "audio_file": str(self.test_audio_file)}
+        with open(self.test_lock_file, 'w') as f:
+            json.dump(lock_data, f)
+        
+        with patch.object(dictate, 'LOCK_FILE', self.test_lock_file):
+            result = dictate.handle_toggle()
+        
+        mock_cleanup.assert_called_once()
+        self.assertEqual(result, 0)
+
+
+class TestToggleCLI(unittest.TestCase):
+    """Test toggle mode CLI integration."""
+
+    @patch('dictate.handle_toggle', return_value=0)
+    def test_toggle_cli_argument(self, mock_toggle):
+        """Test that --toggle argument calls handle_toggle."""
+        with patch('sys.argv', ['dictate.py', '--toggle']):
+            result = dictate.main()
+        
+        mock_toggle.assert_called_once()
+        self.assertEqual(result, 0)
+
+    def test_conflicting_toggle_and_start(self):
+        """Test that --toggle and --start together shows error."""
+        with patch('sys.argv', ['dictate.py', '--toggle', '--start']):
+            result = dictate.main()
+            self.assertEqual(result, 1)
+
+    def test_conflicting_toggle_and_transcribe(self):
+        """Test that --toggle and --transcribe together shows error."""
+        with patch('sys.argv', ['dictate.py', '--toggle', '--transcribe', 'test.wav']):
+            result = dictate.main()
+            self.assertEqual(result, 1)
+
+
 def run_tests():
     """Run all tests."""
     print("=" * 70)
@@ -481,6 +679,9 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionFunction))
     suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionCLI))
     suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionConfiguration))
+    suite.addTests(loader.loadTestsFromTestCase(TestTextInjection))
+    suite.addTests(loader.loadTestsFromTestCase(TestToggleMode))
+    suite.addTests(loader.loadTestsFromTestCase(TestToggleCLI))
     
     runner = unittest.TextTestRunner(verbosity=2)
     result = runner.run(suite)
