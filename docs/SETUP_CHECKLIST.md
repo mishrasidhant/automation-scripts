@@ -311,7 +311,7 @@ checks=0
 passed=0
 
 # System packages
-for cmd in xdotool notify-send python3 pactl; do
+for cmd in xdotool notify-send python3; do
     checks=$((checks + 1))
     if command -v $cmd &> /dev/null; then
         echo "✓ $cmd installed"
