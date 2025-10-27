@@ -33,16 +33,31 @@ if 'faster_whisper' not in sys.modules:
 # Import the module under test
 sys.path.insert(0, os.path.dirname(__file__))
 
-# Temporarily disable import checks for testing
-original_import = __builtins__.__import__
-
-def mock_import(name, *args, **kwargs):
-    if name in ['sounddevice', 'numpy', 'wave']:
-        return MagicMock()
-    return original_import(name, *args, **kwargs)
-
-with patch('builtins.__import__', side_effect=mock_import):
+# Handle different Python versions for __builtins__
+if isinstance(__builtins__, dict):
+    # Python 3.10+
+    original_import = __builtins__['__import__']
+    
+    def mock_import(name, *args, **kwargs):
+        if name in ['sounddevice', 'numpy', 'wave']:
+            return MagicMock()
+        return original_import(name, *args, **kwargs)
+    
+    __builtins__['__import__'] = mock_import
     import dictate
+    __builtins__['__import__'] = original_import
+else:
+    # Python < 3.10
+    original_import = __builtins__.__import__
+    
+    def mock_import(name, *args, **kwargs):
+        if name in ['sounddevice', 'numpy', 'wave']:
+            return MagicMock()
+        return original_import(name, *args, **kwargs)
+    
+    __builtins__.__import__ = mock_import
+    import dictate
+    __builtins__.__import__ = original_import
 
 
 class TestLockFileManagement(unittest.TestCase):
@@ -439,20 +454,76 @@ class TestTranscriptionCLI(unittest.TestCase):
         self.assertEqual(result, 1)
 
 
+class TestLoadConfig(unittest.TestCase):
+    """Test configuration loading from environment variables."""
+
+    def test_load_config_defaults(self):
+        """Test that load_config returns sensible defaults when no env vars are set."""
+        # Clear environment to test defaults
+        with patch.dict(os.environ, {}, clear=True):
+            config = dictate.load_config()
+            
+        self.assertEqual(config['model'], 'base.en')
+        self.assertEqual(config['device'], 'cpu')
+        self.assertEqual(config['compute_type'], 'int8')
+        self.assertEqual(config['sample_rate'], 16000)
+        self.assertEqual(config['channels'], 1)
+        self.assertEqual(config['typing_delay'], 12)
+        self.assertFalse(config['debug'])
+        self.assertTrue(config['vad_filter'])
+
+    def test_load_config_from_env(self):
+        """Test that load_config reads from environment variables."""
+        with patch.dict(os.environ, {'DICTATION_WHISPER_MODEL': 'tiny.en', 'DICTATION_TYPING_DELAY': '20'}):
+            config = dictate.load_config()
+            
+        self.assertEqual(config['model'], 'tiny.en')
+        self.assertEqual(config['typing_delay'], 20)
+
+    def test_load_config_invalid_model(self):
+        """Test that invalid model is rejected with ValueError."""
+        with patch.dict(os.environ, {'DICTATION_WHISPER_MODEL': 'invalid_model'}):
+            with self.assertRaises(ValueError):
+                dictate.load_config()
+
+    def test_load_config_invalid_device(self):
+        """Test that invalid device is rejected with ValueError."""
+        with patch.dict(os.environ, {'DICTATION_WHISPER_DEVICE': 'invalid_device'}):
+            with self.assertRaises(ValueError):
+                dictate.load_config()
+
+    def test_load_config_boolean_handling(self):
+        """Test that boolean environment variables are parsed correctly."""
+        with patch.dict(os.environ, {'DICTATION_WHISPER_VAD_FILTER': 'false', 'DICTATION_ENABLE_NOTIFICATIONS': 'false'}):
+            config = dictate.load_config()
+            
+        self.assertFalse(config['vad_filter'])
+        self.assertFalse(config['enable_notifications'])
+
+    def test_load_config_numeric_handling(self):
+        """Test that numeric environment variables are converted correctly."""
+        with patch.dict(os.environ, {'DICTATION_SAMPLE_RATE': '8000', 'DICTATION_CHANNELS': '2', 'DICTATION_TYPING_DELAY': '50'}):
+            config = dictate.load_config()
+            
+        self.assertEqual(config['sample_rate'], 8000)
+        self.assertEqual(config['channels'], 2)
+        self.assertEqual(config['typing_delay'], 50)
+
+
 class TestTranscriptionConfiguration(unittest.TestCase):
     """Test transcription configuration constants."""
 
     def test_default_model_is_base_en(self):
         """Test that default model is base.en for balanced performance."""
-        self.assertEqual(dictate.MODEL_NAME, "base.en")
+        self.assertEqual(dictate.CONFIG['model'], "base.en")
 
     def test_device_is_cpu(self):
         """Test that default device is CPU (no GPU required)."""
-        self.assertEqual(dictate.DEVICE, "cpu")
+        self.assertEqual(dictate.CONFIG['device'], "cpu")
 
     def test_compute_type_optimized(self):
         """Test that compute type is int8 for CPU optimization."""
-        self.assertEqual(dictate.COMPUTE_TYPE, "int8")
+        self.assertEqual(dictate.CONFIG['compute_type'], "int8")
 
     def test_model_cache_location(self):
         """Test that model cache points to huggingface hub."""
@@ -678,6 +749,7 @@ def run_tests():
     suite.addTests(loader.loadTestsFromTestCase(TestErrorHandling))
     suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionFunction))
     suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionCLI))
+    suite.addTests(loader.loadTestsFromTestCase(TestLoadConfig))
     suite.addTests(loader.loadTestsFromTestCase(TestTranscriptionConfiguration))
     suite.addTests(loader.loadTestsFromTestCase(TestTextInjection))
     suite.addTests(loader.loadTestsFromTestCase(TestToggleMode))

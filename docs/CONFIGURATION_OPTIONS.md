@@ -21,7 +21,7 @@ This file controls all customizable behavior of the dictation module.
 
 ```bash
 # Choose which whisper implementation to use
-WHISPER_ENGINE="faster-whisper"
+DICTATION_WHISPER_ENGINE="faster-whisper"
 # Options: "faster-whisper" | "whisper.cpp" | "openai-whisper"
 ```
 
@@ -39,7 +39,7 @@ WHISPER_ENGINE="faster-whisper"
 
 ```bash
 # Model for faster-whisper
-WHISPER_MODEL="base.en"
+DICTATION_WHISPER_MODEL="base.en"
 # Options: "tiny.en" | "base.en" | "small.en" | "medium.en" | "large-v3"
 ```
 
@@ -57,9 +57,9 @@ WHISPER_MODEL="base.en"
 
 **Your Plan:**
 ```bash
-WHISPER_MODEL="base.en"  # Start here
+DICTATION_WHISPER_MODEL="base.en"  # Start here
 # If too slow, change to:
-# WHISPER_MODEL="tiny.en"
+# DICTATION_WHISPER_MODEL="tiny.en"
 ```
 
 ---
@@ -68,11 +68,11 @@ WHISPER_MODEL="base.en"  # Start here
 
 ```bash
 # Device to run inference on
-WHISPER_DEVICE="cpu"
+DICTATION_WHISPER_DEVICE="cpu"
 # Options: "cpu" | "cuda" (if you have NVIDIA GPU)
 
 # Computation precision (affects speed vs accuracy)
-WHISPER_COMPUTE_TYPE="int8"
+DICTATION_WHISPER_COMPUTE_TYPE="int8"
 # Options: "int8" | "int16" | "float16" | "float32"
 ```
 
@@ -87,8 +87,8 @@ WHISPER_COMPUTE_TYPE="int8"
 
 **Recommended for your system:**
 ```bash
-WHISPER_DEVICE="cpu"
-WHISPER_COMPUTE_TYPE="int8"
+DICTATION_WHISPER_DEVICE="cpu"
+DICTATION_WHISPER_COMPUTE_TYPE="int8"
 ```
 
 ---
@@ -97,15 +97,15 @@ WHISPER_COMPUTE_TYPE="int8"
 
 ```bash
 # Sample rate (Hz) - 16000 is optimal for Whisper
-SAMPLE_RATE=16000
+DICTATION_SAMPLE_RATE=16000
 # Don't change unless you have a specific reason
 
 # Number of audio channels
-CHANNELS=1
+DICTATION_CHANNELS=1
 # Options: 1 (mono, recommended) | 2 (stereo)
 
 # Audio input device
-AUDIO_DEVICE=""
+DICTATION_AUDIO_DEVICE=""
 # Options:
 #   "" (empty) = Use system default
 #   "2" = Specific device index (your Blue Microphones is likely device 2)
@@ -163,20 +163,20 @@ MAX_RECORDING_DURATION=300
 
 ```bash
 # Method for pasting text
-PASTE_METHOD="xdotool"
+DICTATION_PASTE_METHOD="xdotool"
 # Options:
 #   "xdotool" - Direct typing (X11, your system)
 #   "clipboard" - Copy to clipboard, then paste
 #   "both" - Type AND copy to clipboard
 
 # Typing speed (milliseconds between keypresses)
-TYPING_DELAY=12
+DICTATION_TYPING_DELAY=12
 # Options: 0-100 (default: 12)
 # Lower = faster but might miss keys on slow apps
 # Higher = slower but more reliable
 
 # Clear modifiers before typing (prevents stuck keys)
-CLEAR_MODIFIERS=true
+DICTATION_CLEAR_MODIFIERS=true
 # Options: true | false
 ```
 
@@ -190,9 +190,9 @@ CLEAR_MODIFIERS=true
 
 **Your configuration:**
 ```bash
-PASTE_METHOD="xdotool"
-TYPING_DELAY=12
-CLEAR_MODIFIERS=true
+DICTATION_PASTE_METHOD="xdotool"
+DICTATION_TYPING_DELAY=12
+DICTATION_CLEAR_MODIFIERS=true
 ```
 
 ---
@@ -201,21 +201,21 @@ CLEAR_MODIFIERS=true
 
 ```bash
 # Post-processing filters
-STRIP_LEADING_SPACE=true
+DICTATION_STRIP_LEADING_SPACE=true
 # Remove space at start of transcription
 
-STRIP_TRAILING_SPACE=true
+DICTATION_STRIP_TRAILING_SPACE=true
 # Remove space at end of transcription
 
-AUTO_CAPITALIZE=false
+DICTATION_AUTO_CAPITALIZE=false
 # Capitalize first letter (useful for sentences)
 
-AUTO_PUNCTUATION=true
+DICTATION_AUTO_PUNCTUATION=true
 # Keep Whisper's punctuation (. , ? !)
 
 # Replace patterns (comma-separated)
 # Format: "pattern1:replacement1,pattern2:replacement2"
-TEXT_REPLACEMENTS=""
+DICTATION_TEXT_REPLACEMENTS=""
 # Example: "umm:,uh:,you know:" (removes filler words)
 ```
 
@@ -225,23 +225,23 @@ TEXT_REPLACEMENTS=""
 
 ```bash
 # Enable desktop notifications
-ENABLE_NOTIFICATIONS=true
+DICTATION_ENABLE_NOTIFICATIONS=true
 # Options: true | false
 
 # Notification tool
-NOTIFICATION_TOOL="notify-send"
+DICTATION_NOTIFICATION_TOOL="notify-send"
 # Options: "notify-send" | "dunstify" | "none"
 
 # Notification urgency
-NOTIFICATION_URGENCY="normal"
+DICTATION_NOTIFICATION_URGENCY="normal"
 # Options: "low" | "normal" | "critical"
 
 # Notification timeout (milliseconds, 0 = default)
-NOTIFICATION_TIMEOUT=3000
+DICTATION_NOTIFICATION_TIMEOUT=3000
 # 3000 = 3 seconds
 
 # Show transcription in notification
-SHOW_TRANSCRIPTION_IN_NOTIFICATION=true
+DICTATION_SHOW_TRANSCRIPTION_IN_NOTIFICATION=true
 # Options: true | false
 # If true, shows the transcribed text in the notification
 ```
@@ -254,21 +254,21 @@ SHOW_TRANSCRIPTION_IN_NOTIFICATION=true
 
 ```bash
 # Temporary directory for audio files
-TEMP_DIR="/tmp/dictation"
+DICTATION_TEMP_DIR="/tmp/dictation"
 # Will be created if it doesn't exist
 
 # Keep temporary audio files (for debugging)
-KEEP_TEMP_FILES=false
+DICTATION_KEEP_TEMP_FILES=false
 # Options: true | false
 
 # Lock file location
-LOCK_FILE="/tmp/dictation.lock"
+DICTATION_LOCK_FILE="/tmp/dictation.lock"
 # Used for state management (recording/not recording)
 
 # Log file location
-LOG_FILE="$HOME/.local/share/dictation/dictation.log"
+DICTATION_LOG_FILE="$HOME/.local/share/dictation/dictation.log"
 # Set to "" to disable logging
-LOG_LEVEL="INFO"
+DICTATION_LOG_LEVEL="INFO"
 # Options: "DEBUG" | "INFO" | "WARNING" | "ERROR"
 ```
 
@@ -278,28 +278,28 @@ LOG_LEVEL="INFO"
 
 ```bash
 # Whisper language hint
-WHISPER_LANGUAGE="en"
+DICTATION_WHISPER_LANGUAGE="en"
 # Options: "en" | "es" | "fr" | "de" | etc.
 # Helps with accuracy for specific languages
 
 # Whisper VAD (Voice Activity Detection) filter
-WHISPER_VAD_FILTER=true
+DICTATION_WHISPER_VAD_FILTER=true
 # Options: true | false
 # Removes silence before/after speech
 
 # Initial prompt (helps with context/style)
-WHISPER_INITIAL_PROMPT=""
+DICTATION_WHISPER_INITIAL_PROMPT=""
 # Example: "Technical documentation about Linux systems."
 # Helps Whisper understand context
 
 # Beam size (affects accuracy vs speed)
-WHISPER_BEAM_SIZE=5
+DICTATION_WHISPER_BEAM_SIZE=5
 # Options: 1-10 (default: 5)
 # Higher = more accurate but slower
 # Lower = faster but less accurate
 
 # Temperature (randomness in generation)
-WHISPER_TEMPERATURE=0.0
+DICTATION_WHISPER_TEMPERATURE=0.0
 # Options: 0.0-1.0 (default: 0.0)
 # 0.0 = deterministic (recommended)
 # Higher = more random/creative
@@ -341,10 +341,10 @@ Here's a complete example `config/dictation.env` with your preferences:
 # Last updated: 2025-10-26
 
 # === WHISPER ENGINE ===
-WHISPER_ENGINE="faster-whisper"
-WHISPER_MODEL="base.en"              # Start with balanced model
-WHISPER_DEVICE="cpu"
-WHISPER_COMPUTE_TYPE="int8"          # Optimized for CPU
+DICTATION_WHISPER_ENGINE="faster-whisper"
+DICTATION_WHISPER_MODEL="base.en"              # Start with balanced model
+DICTATION_WHISPER_DEVICE="cpu"
+DICTATION_WHISPER_COMPUTE_TYPE="int8"          # Optimized for CPU
 
 # === AUDIO INPUT ===
 SAMPLE_RATE=16000
@@ -355,41 +355,41 @@ MIN_RECORDING_DURATION=0.5
 MAX_RECORDING_DURATION=300
 
 # === TEXT PASTING ===
-PASTE_METHOD="xdotool"               # X11 system
-TYPING_DELAY=12
-CLEAR_MODIFIERS=true
+DICTATION_PASTE_METHOD="xdotool"               # X11 system
+DICTATION_TYPING_DELAY=12
+DICTATION_CLEAR_MODIFIERS=true
 
 # === TEXT PROCESSING ===
-STRIP_LEADING_SPACE=true
-STRIP_TRAILING_SPACE=true
-AUTO_CAPITALIZE=false
-AUTO_PUNCTUATION=true
-TEXT_REPLACEMENTS=""
+DICTATION_STRIP_LEADING_SPACE=true
+DICTATION_STRIP_TRAILING_SPACE=true
+DICTATION_AUTO_CAPITALIZE=false
+DICTATION_AUTO_PUNCTUATION=true
+DICTATION_TEXT_REPLACEMENTS=""
 
 # === NOTIFICATIONS ===
-ENABLE_NOTIFICATIONS=true
-NOTIFICATION_TOOL="notify-send"
-NOTIFICATION_URGENCY="normal"
-NOTIFICATION_TIMEOUT=3000
-SHOW_TRANSCRIPTION_IN_NOTIFICATION=true
+DICTATION_ENABLE_NOTIFICATIONS=true
+DICTATION_NOTIFICATION_TOOL="notify-send"
+DICTATION_NOTIFICATION_URGENCY="normal"
+DICTATION_NOTIFICATION_TIMEOUT=3000
+DICTATION_SHOW_TRANSCRIPTION_IN_NOTIFICATION=true
 
 # === FILE MANAGEMENT ===
-TEMP_DIR="/tmp/dictation"
-KEEP_TEMP_FILES=false
-LOCK_FILE="/tmp/dictation.lock"
-LOG_FILE="$HOME/.local/share/dictation/dictation.log"
-LOG_LEVEL="INFO"
+DICTATION_TEMP_DIR="/tmp/dictation"
+DICTATION_KEEP_TEMP_FILES=false
+DICTATION_LOCK_FILE="/tmp/dictation.lock"
+DICTATION_LOG_FILE="$HOME/.local/share/dictation/dictation.log"
+DICTATION_LOG_LEVEL="INFO"
 
 # === ADVANCED WHISPER SETTINGS ===
-WHISPER_LANGUAGE="en"
-WHISPER_VAD_FILTER=true
-WHISPER_INITIAL_PROMPT=""
-WHISPER_BEAM_SIZE=5
-WHISPER_TEMPERATURE=0.0
+DICTATION_WHISPER_LANGUAGE="en"
+DICTATION_WHISPER_VAD_FILTER=true
+DICTATION_WHISPER_INITIAL_PROMPT=""
+DICTATION_WHISPER_BEAM_SIZE=5
+DICTATION_WHISPER_TEMPERATURE=0.0
 
 # === PERFORMANCE TUNING ===
 # If base.en is too slow, uncomment this:
-# WHISPER_MODEL="tiny.en"
+# DICTATION_WHISPER_MODEL="tiny.en"
 ```
 
 ---
@@ -403,9 +403,9 @@ WHISPER_TEMPERATURE=0.0
 nano modules/dictation/config/dictation.env
 
 # Change this line:
-WHISPER_MODEL="base.en"
+DICTATION_WHISPER_MODEL="base.en"
 # To:
-WHISPER_MODEL="tiny.en"
+DICTATION_WHISPER_MODEL="tiny.en"
 
 # Save and exit
 ```
@@ -413,10 +413,10 @@ WHISPER_MODEL="tiny.en"
 **Method 2: Environment variable override**
 ```bash
 # One-time test
-WHISPER_MODEL="tiny.en" ./dictation-toggle.sh
+DICTATION_WHISPER_MODEL="tiny.en" ./dictation-toggle.sh
 
 # Or export for current session
-export WHISPER_MODEL="tiny.en"
+export DICTATION_WHISPER_MODEL="tiny.en"
 ./dictation-toggle.sh
 ```
 
@@ -462,16 +462,16 @@ Memory: ~400MB
 **Quick test script:**
 ```bash
 # Test base.en
-WHISPER_MODEL="base.en" ./dictation-toggle.sh
+DICTATION_WHISPER_MODEL="base.en" ./dictation-toggle.sh
 
 # Test tiny.en
-WHISPER_MODEL="tiny.en" ./dictation-toggle.sh
+DICTATION_WHISPER_MODEL="tiny.en" ./dictation-toggle.sh
 
 # Test with debug logging
-LOG_LEVEL="DEBUG" ./dictation-toggle.sh
+DICTATION_LOG_LEVEL="DEBUG" ./dictation-toggle.sh
 
 # Test clipboard method
-PASTE_METHOD="clipboard" ./dictation-toggle.sh
+DICTATION_PASTE_METHOD="clipboard" ./dictation-toggle.sh
 ```
 
 ---
@@ -481,11 +481,11 @@ PASTE_METHOD="clipboard" ./dictation-toggle.sh
 For your first run, we'll use these defaults:
 
 ```bash
-✅ WHISPER_MODEL="base.en"           # Balanced
-✅ WHISPER_COMPUTE_TYPE="int8"       # Optimized for CPU
-✅ PASTE_METHOD="xdotool"            # X11
-✅ ENABLE_NOTIFICATIONS=true         # Visual feedback
-✅ WHISPER_VAD_FILTER=true          # Remove silence
+✅ DICTATION_WHISPER_MODEL="base.en"           # Balanced
+✅ DICTATION_WHISPER_COMPUTE_TYPE="int8"       # Optimized for CPU
+✅ DICTATION_PASTE_METHOD="xdotool"            # X11
+✅ DICTATION_ENABLE_NOTIFICATIONS=true         # Visual feedback
+✅ DICTATION_WHISPER_VAD_FILTER=true          # Remove silence
 ✅ AUDIO_DEVICE=""                   # Auto-detect Blue Mic
 ```
 
@@ -515,24 +515,24 @@ CONFIG_FILE="config/dictation-fast.env" ./dictation-toggle.sh
 ## 🔍 Finding the Right Settings
 
 ### If transcription is too slow:
-1. Try `WHISPER_MODEL="tiny.en"`
-2. Reduce `WHISPER_BEAM_SIZE=3`
-3. Disable `WHISPER_VAD_FILTER=false`
+1. Try `DICTATION_WHISPER_MODEL="tiny.en"`
+2. Reduce `DICTATION_WHISPER_BEAM_SIZE=3`
+3. Disable `DICTATION_WHISPER_VAD_FILTER=false`
 
 ### If accuracy is poor:
-1. Try `WHISPER_MODEL="small.en"`
-2. Increase `WHISPER_BEAM_SIZE=7`
-3. Add `WHISPER_INITIAL_PROMPT` with context
+1. Try `DICTATION_WHISPER_MODEL="small.en"`
+2. Increase `DICTATION_WHISPER_BEAM_SIZE=7`
+3. Add `DICTATION_WHISPER_INITIAL_PROMPT` with context
 4. Check microphone placement/quality
 
 ### If text pasting is unreliable:
-1. Increase `TYPING_DELAY=20`
-2. Try `PASTE_METHOD="clipboard"`
-3. Check `CLEAR_MODIFIERS=true`
+1. Increase `DICTATION_TYPING_DELAY=20`
+2. Try `DICTATION_PASTE_METHOD="clipboard"`
+3. Check `DICTATION_CLEAR_MODIFIERS=true`
 
 ### If background noise is an issue:
 1. Adjust `NOISE_GATE_THRESHOLD=0.05`
-2. Enable `WHISPER_VAD_FILTER=true`
+2. Enable `DICTATION_WHISPER_VAD_FILTER=true`
 3. Consider using `AUDIO_GAIN=1.2`
 
 ---

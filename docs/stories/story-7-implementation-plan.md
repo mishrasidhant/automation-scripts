@@ -213,53 +213,53 @@ Remove "Known Limitations" section from README (line 96).
 ## Updated Implementation Checklist
 
 ### Phase 0.5: Shell Wrapper Updates (NEW - REQUIRED FIRST)
-- [ ] Add complete export list to `dictation-toggle.sh` (lines 48+)
-- [ ] Test export chain with `env | grep` validation
-- [ ] Verify Python receives all variables
+- [x] Add complete export list to `dictation-toggle.sh` (lines 48+)
+- [x] Test export chain with `env | grep` validation
+- [x] Verify Python receives all variables
 
 ### Phase 1: Configuration Loading
-- [ ] Create `load_config()` function with all settings
-- [ ] Add configuration validation
-- [ ] Add error handling for invalid configs
-- [ ] Test config loading with various env vars
-- [ ] Test config loading without env vars (defaults)
+- [x] Create `load_config()` function with all settings
+- [x] Add configuration validation
+- [x] Add error handling for invalid configs
+- [x] Test config loading with various env vars
+- [x] Test config loading without env vars (defaults)
 
 ### Phase 2: Update dictate.py
-- [ ] Replace hardcoded constants with CONFIG dict
-- [ ] Update `transcribe_audio()` to use CONFIG
-- [ ] Update `record_audio()` to use CONFIG
-- [ ] Update `paste_text()` to use CONFIG
-- [ ] Update `_send_notification_static()` to use CONFIG
-- [ ] Update all other functions using constants
+- [x] Replace hardcoded constants with CONFIG dict
+- [x] Update `transcribe_audio()` to use CONFIG
+- [x] Update `record_audio()` to use CONFIG
+- [x] Update `paste_text()` to use CONFIG
+- [x] Update `_send_notification_static()` to use CONFIG
+- [x] Update all other functions using constants
 
 ### Phase 3: Text Processing
-- [ ] Implement `STRIP_LEADING_SPACE` logic
-- [ ] Implement `STRIP_TRAILING_SPACE` logic
-- [ ] Implement `AUTO_CAPITALIZE` logic
-- [ ] Implement `AUTO_PUNCTUATION` logic
-- [ ] Add text processing pipeline
+- [x] Implement `STRIP_LEADING_SPACE` logic
+- [x] Implement `STRIP_TRAILING_SPACE` logic
+- [x] Implement `AUTO_CAPITALIZE` logic
+- [x] Implement `AUTO_PUNCTUATION` logic
+- [x] Add text processing pipeline
 
 ### Phase 4: Testing
-- [ ] Add unit tests for `load_config()`
-- [ ] Add tests for configuration validation
-- [ ] Add tests for invalid configurations
-- [ ] Test with config file present
-- [ ] Test without config file (defaults)
-- [ ] Test with partial config (some vars set)
+- [x] Add unit tests for `load_config()`
+- [x] Add tests for configuration validation
+- [x] Add tests for invalid configurations
+- [x] Test with config file present
+- [x] Test without config file (defaults)
+- [x] Test with partial config (some vars set)
 - [ ] Integration test with actual transcription
 
 ### Phase 4.5: Update Existing Tests (NEW - REQUIRED)
-- [ ] Update `test_default_model_is_base_en()` to use CONFIG
-- [ ] Update `test_device_is_cpu()` to use CONFIG
-- [ ] Update `test_compute_type_optimized()` to use CONFIG
-- [ ] Update any other tests referencing old constants
-- [ ] Add test for environment variable loading
+- [x] Update `test_default_model_is_base_en()` to use CONFIG
+- [x] Update `test_device_is_cpu()` to use CONFIG
+- [x] Update `test_compute_type_optimized()` to use CONFIG
+- [x] Update any other tests referencing old constants
+- [x] Add test for environment variable loading
 
 ### Phase 5: Documentation
-- [ ] Update modules/dictation/README.md to remove "Known Limitations" (line 96)
+- [x] Update modules/dictation/README.md to remove "Known Limitations" (line 96)
 - [ ] Update CONFIGURATION_OPTIONS.md status
-- [ ] Add configuration examples to README
-- [ ] Document configuration validation errors
+- [x] Add configuration examples to README
+- [x] Document configuration validation errors
 
 ---
 

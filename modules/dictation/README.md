@@ -93,7 +93,40 @@ The setup script will:
 
 ## Configuration
 
-**Current Limitation:** The module uses hardcoded defaults. The `config/dictation.env` file exists but is not fully functional in the current implementation. Configuration changes require modifying `dictate.py` directly.
+The module is fully configurable via the `config/dictation.env` file. All settings can be changed without modifying Python code.
+
+### Configuration File
+
+Edit `config/dictation.env` to customize behavior:
+
+```bash
+# Whisper model (tiny.en, base.en, small.en, medium.en)
+DICTATION_WHISPER_MODEL="base.en"
+
+# Device (cpu, cuda)
+DICTATION_WHISPER_DEVICE="cpu"
+
+# Audio input device (empty = default, or specify index)
+DICTATION_AUDIO_DEVICE=""
+
+# Typing speed (milliseconds between keystrokes)
+DICTATION_TYPING_DELAY=12
+
+# Enable/disable notifications
+DICTATION_ENABLE_NOTIFICATIONS=true
+
+# Keep temporary audio files (for debugging)
+DICTATION_KEEP_TEMP_FILES=false
+```
+
+### All Configuration Options
+
+See `config/dictation.env` for the complete list of 30+ configuration options including:
+- Whisper model settings (model, device, compute type, language, beam size, temperature)
+- Audio configuration (device, sample rate, channels)
+- Text processing (strip spaces, auto-capitalize, punctuation)
+- Notification settings (tool, urgency, timeout)
+- File management (temp directory, logging)
 
 ### Default Settings
 
@@ -102,6 +135,7 @@ Model: base.en (balanced speed and accuracy)
 Device: CPU
 Compute Type: int8 (optimized for CPU)
 Audio Device: System default
+Typing Delay: 12ms
 Hotkey: Ctrl+' (configured in XFCE)
 ```
 
@@ -124,8 +158,10 @@ xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Primary>apostroph
 # List available devices
 python3 -c "import sounddevice as sd; print(sd.query_devices())"
 
-# Edit dictate.py line 51 to specify device index
-# AUDIO_DEVICE = None  # Change to device number, e.g., 2
+# Edit config/dictation.env to specify device
+DICTATION_AUDIO_DEVICE="2"  # Use device index
+# Or
+DICTATION_AUDIO_DEVICE="Blue Microphones"  # Use device name (partial match)
 ```
 
 ---
@@ -264,15 +300,11 @@ modules/dictation/
 
 ---
 
-## Known Limitations
+## Limitations
 
-1. **Configuration System:** The `config/dictation.env` file is not fully functional. Most settings are hardcoded in `dictate.py`. To change settings, you must edit the Python script directly.
+1. **X11 Only:** Text injection uses xdotool which requires X11. Wayland is not supported.
 
-2. **Model Selection:** Currently fixed to base.en model. Changing models requires modifying `MODEL_NAME` constant in `dictate.py` (line 56).
-
-3. **X11 Only:** Text injection uses xdotool which requires X11. Wayland is not supported.
-
-4. **English Only:** Optimized for English language transcription (uses .en models).
+2. **English Only:** Optimized for English language transcription (uses .en models).
 
 ---
 
@@ -352,9 +384,9 @@ python3 -c "import sounddevice as sd; print(sd.query_devices())"
 
 ## Version Information
 
-**Version:** 1.0  
-**Status:** Production Ready (with configuration limitations)  
-**Last Updated:** October 27, 2025  
+**Version:** 1.1  
+**Status:** Production Ready  
+**Last Updated:** January 27, 2025  
 **System:** Manjaro Linux + XFCE + X11
 
 ---

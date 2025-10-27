@@ -45,25 +45,127 @@ except ImportError:
     WhisperModel = None
 
 
-# Configuration constants
-LOCK_FILE = Path("/tmp/dictation.lock")
-TEMP_DIR = Path("/tmp/dictation")
-SAMPLE_RATE = 16000  # Hz - Optimal for Whisper transcription
-CHANNELS = 1  # Mono audio
-DTYPE = np.int16  # 16-bit PCM
+# Configuration loading function
+def load_config():
+    """Load configuration from environment variables with defaults."""
+    config = {
+        # Whisper model configuration
+        'model': os.environ.get('DICTATION_WHISPER_MODEL', 'base.en'),
+        'device': os.environ.get('DICTATION_WHISPER_DEVICE', 'cpu'),
+        'compute_type': os.environ.get('DICTATION_WHISPER_COMPUTE_TYPE', 'int8'),
+        'language': os.environ.get('DICTATION_WHISPER_LANGUAGE', 'en'),
+        'beam_size': int(os.environ.get('DICTATION_WHISPER_BEAM_SIZE', '5')),
+        'temperature': float(os.environ.get('DICTATION_WHISPER_TEMPERATURE', '0.0')),
+        'vad_filter': os.environ.get('DICTATION_WHISPER_VAD_FILTER', 'true').lower() == 'true',
+        'initial_prompt': os.environ.get('DICTATION_WHISPER_INITIAL_PROMPT', ''),
+        
+        # Audio configuration
+        'audio_device': os.environ.get('DICTATION_AUDIO_DEVICE', '') or None,
+        'sample_rate': int(os.environ.get('DICTATION_SAMPLE_RATE', '16000')),
+        'channels': int(os.environ.get('DICTATION_CHANNELS', '1')),
+        
+        # Text processing
+        'paste_method': os.environ.get('DICTATION_PASTE_METHOD', 'xdotool'),
+        'typing_delay': int(os.environ.get('DICTATION_TYPING_DELAY', '12')),
+        'clear_modifiers': os.environ.get('DICTATION_CLEAR_MODIFIERS', 'true').lower() == 'true',
+        'strip_leading': os.environ.get('DICTATION_STRIP_LEADING_SPACE', 'true').lower() == 'true',
+        'strip_trailing': os.environ.get('DICTATION_STRIP_TRAILING_SPACE', 'true').lower() == 'true',
+        'auto_capitalize': os.environ.get('DICTATION_AUTO_CAPITALIZE', 'false').lower() == 'true',
+        'auto_punctuation': os.environ.get('DICTATION_AUTO_PUNCTUATION', 'true').lower() == 'true',
+        'text_replacements': os.environ.get('DICTATION_TEXT_REPLACEMENTS', ''),
+        
+        # Notifications
+        'enable_notifications': os.environ.get('DICTATION_ENABLE_NOTIFICATIONS', 'true').lower() == 'true',
+        'notification_tool': os.environ.get('DICTATION_NOTIFICATION_TOOL', 'notify-send'),
+        'notification_urgency': os.environ.get('DICTATION_NOTIFICATION_URGENCY', 'normal'),
+        'notification_timeout': int(os.environ.get('DICTATION_NOTIFICATION_TIMEOUT', '3000')),
+        'show_transcription': os.environ.get('DICTATION_SHOW_TRANSCRIPTION_IN_NOTIFICATION', 'true').lower() == 'true',
+        
+        # File management
+        'temp_dir': Path(os.environ.get('DICTATION_TEMP_DIR', '/tmp/dictation')),
+        'keep_temp': os.environ.get('DICTATION_KEEP_TEMP_FILES', 'false').lower() == 'true',
+        'lock_file': Path(os.environ.get('DICTATION_LOCK_FILE', '/tmp/dictation.lock')),
+        'log_file': os.environ.get('DICTATION_LOG_FILE', ''),
+        'log_level': os.environ.get('DICTATION_LOG_LEVEL', 'INFO'),
+        
+        # Legacy debug mode
+        'debug': os.environ.get('DICTATION_DEBUG', '').lower() in ('1', 'true', 'yes'),
+    }
+    
+    # Validation
+    valid_models = ['tiny.en', 'base.en', 'small.en', 'medium.en', 'large-v3']
+    if config['model'] not in valid_models:
+        raise ValueError(f"Invalid model: {config['model']}. Must be one of {valid_models}")
+    
+    valid_devices = ['cpu', 'cuda']
+    if config['device'] not in valid_devices:
+        raise ValueError(f"Invalid device: {config['device']}. Must be one of {valid_devices}")
+    
+    return config
 
-# Transcription configuration
-MODEL_NAME = "base.en"  # Default Whisper model
-DEVICE = "cpu"  # CPU inference (no GPU required)
-COMPUTE_TYPE = "int8"  # Optimized for CPU performance
+# Load configuration once at module level
+try:
+    CONFIG = load_config()
+except Exception as e:
+    print(f"Configuration error: {e}", file=sys.stderr)
+    # Fall back to safe defaults
+    CONFIG = {
+        'model': 'base.en',
+        'device': 'cpu',
+        'compute_type': 'int8',
+        'audio_device': None,
+        'sample_rate': 16000,
+        'channels': 1,
+        'typing_delay': 12,
+        'lock_file': Path('/tmp/dictation.lock'),
+        'temp_dir': Path('/tmp/dictation'),
+        'debug': False,
+    }
+
+# Legacy aliases for backwards compatibility
+LOCK_FILE = CONFIG['lock_file']
+TEMP_DIR = CONFIG['temp_dir']
+SAMPLE_RATE = CONFIG['sample_rate']
+CHANNELS = CONFIG['channels']
+DTYPE = np.int16  # 16-bit PCM (not configurable)
+MODEL_NAME = CONFIG['model']
+DEVICE = CONFIG['device']
+COMPUTE_TYPE = CONFIG['compute_type']
 MODEL_CACHE = os.path.expanduser("~/.cache/huggingface/hub/")
-
-# Text injection configuration
-XDOTOOL_DELAY_MS = 12  # Milliseconds between keystrokes (balance speed vs reliability)
-DEBUG_MODE = os.environ.get("DICTATION_DEBUG", "").lower() in ("1", "true", "yes")
+XDOTOOL_DELAY_MS = CONFIG['typing_delay']
+DEBUG_MODE = CONFIG['debug']
 
 
-def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool = False) -> str:
+def process_text(text: str) -> str:
+    """
+    Apply text processing transformations based on CONFIG.
+    
+    Args:
+        text: Raw transcription text
+        
+    Returns:
+        Processed text with transformations applied
+    """
+    if not text:
+        return text
+    
+    # Strip leading/trailing spaces
+    if CONFIG['strip_leading']:
+        text = text.lstrip()
+    if CONFIG['strip_trailing']:
+        text = text.rstrip()
+    
+    # Auto-capitalize first letter
+    if CONFIG['auto_capitalize'] and len(text) > 0:
+        text = text[0].upper() + text[1:] if len(text) > 1 else text.upper()
+    
+    # Normalize whitespace
+    text = " ".join(text.split())
+    
+    return text
+
+
+def transcribe_audio(audio_file: str, model_name: str = None, verbose: bool = False) -> str:
     """
     Transcribe audio file to text using faster-whisper.
     
@@ -94,6 +196,18 @@ def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool
     if not audio_path.is_file():
         raise FileNotFoundError(f"Path is not a file: {audio_file}")
     
+    # Use CONFIG if model_name not specified
+    if model_name is None:
+        model_name = CONFIG['model']
+    
+    device = CONFIG['device']
+    compute_type = CONFIG['compute_type']
+    language = CONFIG['language']
+    beam_size = CONFIG['beam_size']
+    temperature = CONFIG['temperature']
+    vad_filter = CONFIG['vad_filter']
+    initial_prompt = CONFIG['initial_prompt']
+    
     # Send notification that transcription is starting
     _send_notification_static(
         "⏳ Transcribing...",
@@ -106,13 +220,13 @@ def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool
     try:
         if verbose:
             print(f"Loading Whisper model: {model_name}", file=sys.stderr)
-            print(f"Device: {DEVICE}, Compute type: {COMPUTE_TYPE}", file=sys.stderr)
+            print(f"Device: {device}, Compute type: {compute_type}", file=sys.stderr)
         
         # Load Whisper model
         model = WhisperModel(
             model_size_or_path=model_name,
-            device=DEVICE,
-            compute_type=COMPUTE_TYPE,
+            device=device,
+            compute_type=compute_type,
             cpu_threads=0,  # Use all available cores
             num_workers=1
         )
@@ -123,15 +237,20 @@ def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool
         
         # Transcribe audio
         transcribe_start = time.time()
-        segments, info = model.transcribe(
-            str(audio_path),
-            language="en",
-            beam_size=5,
-            vad_filter=True,  # Remove silence
-            vad_parameters=dict(
-                min_silence_duration_ms=500
-            )
-        )
+        transcribe_kwargs = {
+            'language': language,
+            'beam_size': beam_size,
+            'temperature': temperature,
+        }
+        
+        if vad_filter:
+            transcribe_kwargs['vad_filter'] = True
+            transcribe_kwargs['vad_parameters'] = dict(min_silence_duration_ms=500)
+        
+        if initial_prompt:
+            transcribe_kwargs['initial_prompt'] = initial_prompt
+        
+        segments, info = model.transcribe(str(audio_path), **transcribe_kwargs)
         
         # Join segments into single string
         text_parts = []
@@ -140,9 +259,8 @@ def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool
         
         text = " ".join(text_parts)
         
-        # Post-processing
-        text = text.strip()  # Remove leading/trailing whitespace
-        text = " ".join(text.split())  # Normalize internal whitespace
+        # Apply text processing
+        text = process_text(text)
         
         transcribe_time = time.time() - transcribe_start
         total_time = time.time() - start_time
@@ -157,11 +275,18 @@ def transcribe_audio(audio_file: str, model_name: str = "base.en", verbose: bool
                 print(f"Processing speed: {speed_ratio:.1f}x realtime", file=sys.stderr)
         
         # Send completion notification
-        _send_notification_static(
-            "✅ Transcription Complete",
-            text[:100] + ("..." if len(text) > 100 else ""),
-            urgency="normal"
-        )
+        if CONFIG['show_transcription']:
+            _send_notification_static(
+                "✅ Transcription Complete",
+                text[:100] + ("..." if len(text) > 100 else ""),
+                urgency="normal"
+            )
+        else:
+            _send_notification_static(
+                "✅ Transcription Complete",
+                "Processing your audio",
+                urgency="normal"
+            )
         
         return text
         
@@ -180,9 +305,15 @@ def _send_notification_static(title, message, urgency="normal"):
     Static helper function to send desktop notifications.
     Used by transcribe_audio() which is not part of a class.
     """
+    if not CONFIG.get('enable_notifications', True):
+        return
+        
     try:
+        tool = CONFIG.get('notification_tool', 'notify-send')
+        urgency_arg = CONFIG.get('notification_urgency', urgency)
+        
         subprocess.run(
-            ["notify-send", "-u", urgency, title, message],
+            [tool, "-u", urgency_arg, title, message],
             check=False,
             capture_output=True,
         )
@@ -208,22 +339,22 @@ def paste_text_xdotool(text: str) -> bool:
         
     try:
         # Clear any stuck modifier keys (Ctrl, Alt, Shift)
-        subprocess.run(
-            ["xdotool", "keyup", "Control_L", "Alt_L", "Shift_L"],
-            check=False,
-            capture_output=True,
-            timeout=5
-        )
-        
-        # Small delay to ensure keys are released
-        time.sleep(0.05)
+        if CONFIG['clear_modifiers']:
+            subprocess.run(
+                ["xdotool", "keyup", "Control_L", "Alt_L", "Shift_L"],
+                check=False,
+                capture_output=True,
+                timeout=5
+            )
+            # Small delay to ensure keys are released
+            time.sleep(0.05)
         
         # Type the text
         # --clearmodifiers: ensure no modifiers interfere
         # --delay: milliseconds between keystrokes
         # --: end of options, everything after is literal text
         result = subprocess.run(
-            ["xdotool", "type", "--clearmodifiers", "--delay", str(XDOTOOL_DELAY_MS), "--", text],
+            ["xdotool", "type", "--clearmodifiers", "--delay", str(CONFIG['typing_delay']), "--", text],
             check=True,
             capture_output=True,
             text=True,
@@ -307,10 +438,16 @@ class DictationRecorder:
         self.audio_data.append(indata.copy())
 
     def _send_notification(self, title, message, urgency="normal"):
-        """Send desktop notification using notify-send."""
+        """Send desktop notification using configured tool."""
+        if not CONFIG.get('enable_notifications', True):
+            return
+            
         try:
+            tool = CONFIG.get('notification_tool', 'notify-send')
+            urgency_arg = CONFIG.get('notification_urgency', urgency)
+            
             subprocess.run(
-                ["notify-send", "-u", urgency, title, message],
+                [tool, "-u", urgency_arg, title, message],
                 check=False,
                 capture_output=True,
             )
@@ -728,7 +865,7 @@ def handle_toggle():
                 )
                 # Clean up
                 cleanup_stale_lock()
-                if not DEBUG_MODE and Path(audio_file).exists():
+                if not CONFIG.get('keep_temp', False) and Path(audio_file).exists():
                     Path(audio_file).unlink()
                 return 0
             
@@ -765,7 +902,7 @@ def handle_toggle():
             
             # Clean up
             cleanup_stale_lock()
-            if not DEBUG_MODE and Path(audio_file).exists():
+            if not CONFIG.get('keep_temp', False) and Path(audio_file).exists():
                 try:
                     Path(audio_file).unlink()
                 except Exception as e:
