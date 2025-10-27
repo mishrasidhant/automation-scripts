@@ -19,7 +19,6 @@ This document outlines the complete architecture for the **dictation module** in
 | **Notifications** | notify-send | Already installed, integrates with XFCE |
 | **State Management** | Lock file (`/tmp/dictation.lock`) | Simple IPC, no extra dependencies |
 | **Package Manager** | pacman + yay | Native Arch/Manjaro tooling |
-| **Service Management** | systemd --user | Optional daemon mode support |
 
 **Key Dependencies:**
 - Python 3.13.7 ✓ (installed)
@@ -34,7 +33,7 @@ This document outlines the complete architecture for the **dictation module** in
 ## 🎯 Design Goals
 
 1. **Minimal Dependencies** - Use native Linux tools where possible
-2. **Multiple Trigger Options** - Support various hotkey mechanisms (xbindkeys, systemd, DE shortcuts)
+2. **System-Native Integration** - Use XFCE native shortcuts (zero overhead)
 3. **Reliable & Fast** - Quick activation, responsive transcription
 4. **User-Friendly** - Visual feedback via notifications
 5. **Configurable** - Easy to customize paths, models, and hotkeys
@@ -44,7 +43,7 @@ This document outlines the complete architecture for the **dictation module** in
 
 ## 🏗️ Architecture Patterns
 
-### Pattern 1: **Daemon Mode** (Current Implementation)
+### Pattern 1: **Daemon Mode** (NOT IMPLEMENTED)
 The Python script runs as a persistent background process listening for hotkeys.
 
 **Pros:**
@@ -57,7 +56,7 @@ The Python script runs as a persistent background process listening for hotkeys.
 - Resource consumption while idle
 - Complex systemd service management
 
-### Pattern 2: **On-Demand Trigger** (RECOMMENDED)
+### Pattern 2: **On-Demand Trigger** (IMPLEMENTED)
 Desktop hotkey tool invokes a wrapper script that manages recording/transcription lifecycle.
 
 **Pros:**
@@ -80,12 +79,12 @@ Desktop hotkey tool invokes a wrapper script that manages recording/transcriptio
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   User Presses Hotkey                        │
-│                  (Ctrl+Alt+Space, etc.)                      │
+│                       (Ctrl+')                               │
 └────────────────────────┬────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────┐
-│              Hotkey Manager (xbindkeys/sxhkd)                │
+│           XFCE Native Keyboard Shortcuts                     │
 │                  Triggers Shell Script                       │
 └────────────────────────┬────────────────────────────────────┘
                          │
@@ -251,13 +250,13 @@ XFCE has built-in keyboard shortcut management - no extra daemon needed!
 1. Open: Settings → Keyboard → Application Shortcuts
 2. Click "Add" button
 3. Command: $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh
-4. Press your desired key combination (e.g., Ctrl+Alt+Space)
+4. Press your desired key combination (e.g., Ctrl+')
 ```
 
 **Method B: CLI**
 ```bash
 # Add shortcut via xfconf-query
-xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Primary><Alt>space" \
+xfconf-query -c xfce4-keyboard-shortcuts -p "/commands/custom/<Primary>apostrophe" \
   -n -t string -s "$HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh"
 ```
 
@@ -283,7 +282,7 @@ sudo pacman -S xbindkeys
 
 # Configure ~/.xbindkeysrc
 echo '"$HOME/path/to/dictation-toggle.sh"
-  control+alt+space' >> ~/.xbindkeysrc
+  control+apostrophe' >> ~/.xbindkeysrc
 
 # Start (auto-start via XFCE Session)
 xbindkeys
@@ -482,7 +481,7 @@ AUDIO_DEVICE="2"  # Example: Blue Microphones is usually card 2
 
 ```
 ┌────────────────────────────────────────┐
-│  User presses Ctrl+Alt+Space           │
+│  User presses Ctrl+'                   │
 └───────────────┬────────────────────────┘
                 │
                 ▼
@@ -629,15 +628,24 @@ WantedBy=default.target
 
 ---
 
-## 🚦 Next Steps
+## 🚦 Implementation Status
 
-1. **Refactor `dictate.py`** to support CLI arguments and state management
-2. **Create `dictation-toggle.sh`** wrapper script
-3. **Write `setup.sh`** for automated configuration
-4. **Test with xbindkeys** (most common case)
-5. **Document Wayland support** with `wtype`
-6. **Add optional systemd service** for daemon mode
-7. **Create module README** with user-facing docs
+✅ **Completed (Stories 1-5):**
+1. ✅ **Refactored `dictate.py`** with CLI arguments, lock file state management
+2. ✅ **Created `dictation-toggle.sh`** wrapper script  
+3. ✅ **Wrote `setup.sh`** for automated dependency installation and XFCE configuration
+4. ✅ **Tested with XFCE native shortcuts** (Ctrl+' hotkey)
+5. ✅ **Created comprehensive test suite** (`test_dictate.py`)
+
+🚧 **In Progress (Story 6):**
+- 🚧 **User-facing module README** (documentation & usage guide)
+- 🚧 **Test validation script** (automated testing)
+- 🚧 **Performance benchmarks** (speed/accuracy metrics)
+
+📋 **Future Enhancements (Optional):**
+- Wayland support with `wtype`
+- Optional daemon mode with systemd service
+- Additional language model support
 
 ---
 
@@ -666,7 +674,7 @@ cd $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation
 # 6. Configure XFCE hotkey (via GUI)
 # Settings → Keyboard → Application Shortcuts → Add
 # Command: $HOME/Files/W/Workspace/git/automation/automation-scripts/modules/dictation/dictation-toggle.sh
-# Key: Ctrl+Alt+Space
+# Key: Ctrl+'
 ```
 
 ---

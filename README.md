@@ -1,7 +1,7 @@
 # ⚙️ automation-scripts
 
-A modular monorepo for managing **system-level automation scripts** and their corresponding `systemd` services.  
-Each automation is **self-contained** — it can exist independently or be linked with a `systemd` unit when ready for deployment.
+A modular monorepo for managing **system-level automation tools and scripts**.  
+Each automation is **self-contained** and **independently deployable** — modules can be standalone scripts, hotkey-triggered utilities, systemd services, client-server architectures, or any combination that fits the use case.
 
 ---
 
@@ -11,39 +11,37 @@ automation-scripts/
 ├── README.md # Repository overview and module design guide
 │
 ├── modules/ # Independent automation modules
-│ ├── dictation/ # Example 1: Whisper-based dictation app
-│ │ ├── dictation.py # Captures mic audio and transcribes via whisper.cpp
-│ │ ├── dictation-hotkey.sh # Triggered by keyboard shortcut (e.g. xbindkeys)
-│ │ ├── dictation.service # Optional systemd unit for background mode
+│ ├── dictation/ # Voice-to-text with hotkey trigger (Python + XFCE)
+│ │ ├── dictate.py # Core: audio recording + AI transcription
+│ │ ├── dictation-toggle.sh # Wrapper: hotkey integration + state management
+│ │ ├── setup.sh # Automated setup + dependency installation
 │ │ ├── config/ # Module-specific configuration
-│ │ │ └── dictation.env # Env vars (paths, whisper.cpp model, etc.)
-│ │ └── README.md # Setup, usage, and hotkey configuration
+│ │ │ └── dictation.env # Settings (model, audio device, paths, etc.)
+│ │ └── README.md # User guide and troubleshooting
 │ │
-│ ├── borg-backup/ # Example 2: Automated BorgBackup script
+│ ├── borg-backup/ # (Future) Automated backup with systemd scheduling
 │ │ ├── backup.sh # Full-featured backup + prune + compact routine
 │ │ ├── borg-backup.service # systemd unit for manual/triggered runs
-│ │ ├── borg-backup.timer # Optional systemd timer for scheduled runs
+│ │ ├── borg-backup.timer # systemd timer for scheduled runs
 │ │ ├── config/ # Module-local settings
 │ │ │ └── borg-backup.env # Customizable variables (dirs, repo name, etc.)
 │ │ └── README.md # Configuration and operational details
 │ │
 │ └── ... # Future automations (network monitor, sync tool, etc.)
 │
-├── staging/ # houses scripts that are being tested/staged to be moved into systemd automations
+├── staging/ # Experimental scripts being tested before module promotion
 |
-├── scripts/ # Shared or ad-hoc system utility scripts
-│ ├── setup-hotkeys.sh # Registers or updates desktop hotkey triggers
-│ ├── setup-services.sh # Enables/disables module-specific systemd units
-│ ├── link-module.sh # Symlinks module units into ~/.config/systemd/user
-│ └── utils.sh # Shared functions (logging, env validation, etc.)
+├── scripts/ # Shared utility scripts and cross-module tools
+│ ├── setup-dev.sh # Development environment setup
+│ └── ... # Future utilities (install helpers, shared functions, etc.)
 │
 └── docs/ # Developer documentation and standards
-├── ARCHITECTURE_SUMMARY.md # Quick reference for architecture decisions
-├── DICTATION_ARCHITECTURE.md # Detailed dictation module design
-├── SYSTEM_PROFILE.md # System-specific configuration and recommendations
-├── SETUP_CHECKLIST.md # Pre-flight validation and dependency setup
-├── CONTRIBUTING.md # Conventions for adding and testing modules
-└── ARCHITECTURE.md # Detailed design overview and reasoning
+    ├── ARCHITECTURE_SUMMARY.md # Quick reference for architecture decisions
+    ├── DICTATION_ARCHITECTURE.md # Dictation module technical design
+    ├── SYSTEM_PROFILE.md # System-specific configuration and recommendations
+    ├── SETUP_CHECKLIST.md # Pre-flight validation and dependency setup
+    ├── ENVIRONMENT_SETUP.md # Environment configuration guide
+    └── stories/ # Module implementation stories (user stories + specs)
 
 
 ---
@@ -52,27 +50,31 @@ automation-scripts/
 
 `automation-scripts` is designed to:
 
-- Serve as a **single home** for automation scripts, services, and timers.
-- Keep **modules decoupled** — each one works standalone or under systemd.
-- Support **dynamic linking** — use `scripts/link-module.sh` to symlink services into your user systemd directory when ready.
-- Encourage **clarity, reusability, and minimal coupling** between logic (scripts) and orchestration (systemd).
+- Serve as a **single home** for diverse automation tools and scripts.
+- Keep **modules decoupled** — each module is self-contained and independently deployable.
+- Support **multiple deployment patterns** — hotkey-triggered, systemd services, cron jobs, client-server, or standalone.
+- Encourage **clarity, reusability, and minimal coupling** — modules can work independently or be composed together.
 
 ---
 
 ## 🗣️ Example Module: Dictation (Voice-to-Text)
+
+**Status:** ✅ Implemented  
+**Pattern:** Hotkey-triggered standalone Python script
 
 This module adds a **local voice dictation utility** that records from the microphone, transcribes speech using faster-whisper AI, and pastes text into the active cursor position.
 
 **System-Optimized:** Architecture has been tailored for **Manjaro Linux + XFCE + X11** based on comprehensive system detection.
 
 **Key components:**
-- `dictation.py` — Core recording and transcription logic (faster-whisper).
-- `dictation-toggle.sh` — Wrapper script for hotkey integration.
+- `dictate.py` — Core recording and transcription logic (faster-whisper).
+- `dictation-toggle.sh` — Wrapper script for state management and hotkey integration.
 - `config/dictation.env` — User-configurable settings (model, audio device, etc.).
-- `setup.sh` — Automated dependency checking and XFCE hotkey registration.
+- `setup.sh` — Automated dependency installation and XFCE hotkey registration.
+- `test_dictate.py` — Comprehensive test suite for validation.
 
-**Example usage:**
-Press `Ctrl+Alt+Space` → speak → press again → text appears at your cursor.
+**Usage:**
+Press `Ctrl+'` (configurable) → speak → press again → text appears at your cursor.
 
 **Documentation:**
 - 📋 [Quick Summary](docs/ARCHITECTURE_SUMMARY.md) - Key decisions and overview
@@ -82,15 +84,17 @@ Press `Ctrl+Alt+Space` → speak → press again → text appears at your cursor
 
 ---
 
-## 💾 Example Module: Borg Backup Automation
+## 💾 Future Module: Borg Backup Automation
 
-A robust Borg-based backup pipeline with integrated logging, pruning, and repository compaction.  
-Adapted from your current working script.
+**Status:** 🚧 Planned  
+**Pattern:** Systemd service + timer scheduling
 
-**Key components:**
+A robust Borg-based backup pipeline with integrated logging, pruning, and repository compaction.
+
+**Planned components:**
 - `backup.sh` — Orchestrates backup, prune, and compact phases with fault tolerance.
 - `borg-backup.service` — Runs backups manually or via trigger.
-- `borg-backup.timer` — Optional daily/weekly timer for scheduled jobs.
+- `borg-backup.timer` — Daily/weekly timer for scheduled jobs.
 - `config/backup.env` — Define `$BACKUP_DIR`, `$BORG_REPO`, exclusions, etc.
 
 **Example use:**
@@ -99,31 +103,33 @@ systemctl --user start borg-backup.service
 systemctl --user enable borg-backup.timer
 ```
 
+This demonstrates the repository's flexibility — systemd-based scheduling works great for some automations, while others (like dictation) use different patterns.
+
 ---
 
 
 ## 🧩 Extending the Repo
 
-To add a new automation:
+To add a new automation module:
 
-1. Create a directory:
-
+1. **Create module directory:**
    ```bash
    mkdir -p modules/my-automation/config
    ```
-2. Add:
 
-   * Core script (`my-automation.sh` or `.py`)
-   * Optional `my-automation.service` / `.timer`
-   * Config file under `config/`
-   * `README.md` with usage and variables
-3. Link it for systemd (when ready):
+2. **Add module components:**
+   - Core script(s) (`my-automation.py`, `my-automation.sh`, etc.)
+   - Configuration file in `config/` directory
+   - Setup script (optional, for automated installation)
+   - `README.md` with usage guide and configuration options
+   - Test suite (optional but recommended)
 
-   ```bash
-   ./scripts/link-module.sh modules/my-automation/my-automation.service
-   systemctl --user daemon-reload
-   systemctl --user enable my-automation.service
-   ```
+3. **Choose deployment pattern:**
+   - **Hotkey-triggered:** Register with desktop environment (like dictation)
+   - **Systemd service:** Create `.service` and/or `.timer` files
+   - **Cron job:** Add to user or system crontab
+   - **Client-server:** Set up daemon + client interface
+   - **Standalone:** Run manually or via other triggers
 
 Each module remains **self-contained** and **independent** of others until explicitly coupled.
 
@@ -131,9 +137,10 @@ Each module remains **self-contained** and **independent** of others until expli
 
 ## 🧠 Design Principles
 
-* **Local-first:** Automations run entirely on-device.
+* **Local-first:** Automations run entirely on-device (no cloud dependencies).
+* **Modular:** Each module is self-contained with its own configuration and dependencies.
 * **Decoupled:** Logic, configuration, and orchestration live in their own layers.
-* **System-native:** Uses `systemd` for reliability and lifecycle management.
+* **Pattern-agnostic:** Use the deployment pattern that fits the automation (hotkeys, systemd, cron, client-server, etc.).
 * **Composable:** Modules can be chained, triggered, or scheduled dynamically.
 * **Transparent:** Scripts remain simple, auditable, and portable.
 
@@ -160,12 +167,15 @@ source scripts/setup-dev.sh dictation
 
 For complete setup instructions, see [ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md).
 
-You can now manage modules individually:
+### Setting Up the Dictation Module
 
 ```bash
-systemctl --user start dictation.service
-systemctl --user enable borg-backup.timer
+cd modules/dictation
+./setup.sh  # Installs dependencies and configures hotkey
+# Press Ctrl+' to start/stop dictation
 ```
+
+See [modules/dictation/README.md](modules/dictation/README.md) for detailed usage instructions.
 
 ---
 
