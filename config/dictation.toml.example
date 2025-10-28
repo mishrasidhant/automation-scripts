@@ -1,0 +1,260 @@
+# ============================================================================
+# Dictation Module Configuration Example
+# ============================================================================
+#
+# Copy this file to: ~/.config/automation-scripts/dictation.toml
+#
+# Configuration precedence (highest to lowest):
+#   1. Environment variables (DICTATION_WHISPER_MODEL, etc.)
+#   2. This TOML file (~/.config/automation-scripts/dictation.toml)
+#   3. Built-in defaults (see src/automation_scripts/dictation/constants.py)
+#
+# After editing, test with: uv run dictation-toggle --start
+#
+# ============================================================================
+
+# ============================================================================
+# [whisper] - Speech Recognition Configuration
+# ============================================================================
+[whisper]
+
+# Whisper model size - affects accuracy and speed
+# Options: tiny.en, base.en, small.en, medium.en, large-v1, large-v2, large-v3
+# 
+# Recommendations:
+#   - tiny.en:   Fastest, ~1GB RAM, good for simple dictation
+#   - base.en:   Balanced, ~2GB RAM, recommended for most users
+#   - small.en:  Better accuracy, ~3GB RAM, slightly slower
+#   - medium.en: High accuracy, ~5GB RAM, noticeably slower
+#   - large-v3:  Best accuracy, ~10GB RAM, slow (GPU recommended)
+#
+# First run downloads the model to ~/.cache/automation-scripts/dictation/models/
+model = "base.en"
+
+# Compute device: cpu, cuda, auto
+# 
+# - cpu:  Works everywhere, slower
+# - cuda: Requires NVIDIA GPU with CUDA, much faster
+# - auto: Automatically detect CUDA, fallback to CPU
+device = "cpu"
+
+# Compute type affects precision and speed
+# Options: int8, int16, float16, float32
+#
+# Recommendations:
+#   CPU:  int8 (fastest, good accuracy)
+#   GPU:  float16 (good balance) or int8 (fastest)
+compute_type = "int8"
+
+# Language code (ISO 639-1)
+# Examples: en, es, fr, de, it, pt, ru, ja, zh
+# Use "en" for English models (faster, more accurate)
+language = "en"
+
+# Beam size for transcription (1-10)
+# Higher = more accurate but slower
+# 5 is a good balance for most use cases
+beam_size = 5
+
+# Sampling temperature (0.0 - 1.0)
+# 0.0 = deterministic (same input = same output)
+# >0.0 = more random/creative (not recommended for dictation)
+temperature = 0.0
+
+# Voice Activity Detection (VAD) filter
+# true = remove silence/noise (recommended)
+# false = transcribe everything including silence
+vad_filter = true
+
+# ============================================================================
+# [audio] - Audio Recording Configuration
+# ============================================================================
+[audio]
+
+# Audio input device
+# 
+# Options:
+#   - "default": Use system default microphone
+#   - Device name: e.g., "USB Audio Device"
+#   - Hardware ID: e.g., "hw:0" (Linux ALSA)
+#
+# To list available devices, run:
+#   python -c "import sounddevice; print(sounddevice.query_devices())"
+device = "default"
+
+# Sample rate in Hz (MUST be 16000 for Whisper)
+# Do not change unless you know what you're doing
+sample_rate = 16000
+
+# Number of audio channels (MUST be 1 for Whisper)
+# 1 = mono (required)
+channels = 1
+
+# ============================================================================
+# [text] - Text Injection Configuration
+# ============================================================================
+[text]
+
+# Paste method determines how transcribed text is injected
+# Options:
+#   - "xdotool":   Simulate keyboard typing (works in most apps)
+#   - "clipboard": Copy to clipboard (requires manual paste)
+#   - "both":      Copy to clipboard AND type (safest)
+#
+# xdotool is recommended for seamless operation
+paste_method = "xdotool"
+
+# Typing delay in milliseconds between keystrokes
+# 
+# Lower values = faster typing but may cause:
+#   - Missed characters in some applications
+#   - Race conditions with text input
+#
+# Higher values = more reliable but slower
+# 
+# Recommended values:
+#   - Fast systems: 8-12 ms
+#   - Slow systems or problematic apps: 15-20 ms
+typing_delay = 12
+
+# Auto-capitalize first letter of transcription
+# true = "hello world" → "Hello world"
+# false = keeps original capitalization from Whisper
+auto_capitalize = false
+
+# Strip leading/trailing whitespace
+# true = " hello world " → "hello world"
+# false = preserves all whitespace
+strip_spaces = true
+
+# Add period at end if missing
+# true = "hello world" → "hello world."
+# false = keeps original punctuation from Whisper
+add_period = false
+
+# ============================================================================
+# [notifications] - Desktop Notification Configuration
+# ============================================================================
+[notifications]
+
+# Enable/disable desktop notifications
+# true = show notifications (recommended)
+# false = silent operation
+enable = true
+
+# Notification tool
+# Options: notify-send, dunstify
+# notify-send is standard on most Linux systems
+tool = "notify-send"
+
+# Notification urgency level
+# Options: low, normal, critical
+# 
+# - low:      No sound, minimal interruption
+# - normal:   Standard notification (recommended)
+# - critical: Sound + persistent (for errors only)
+urgency = "normal"
+
+# Notification timeout in milliseconds
+# 
+# - 0:     Use system default (usually 3-5 seconds)
+# - >0:    Custom timeout
+# - -1:    Never expire (persistent notification)
+#
+# Recommended: 3000 (3 seconds)
+timeout = 3000
+
+# Notification icon
+# Can be an icon name (from system theme) or path to image file
+# Examples: "microphone", "audio-input-microphone", "/path/to/icon.png"
+icon = "microphone"
+
+# ============================================================================
+# [files] - File Management Configuration
+# ============================================================================
+[files]
+
+# Temporary directory for audio files
+# Audio recordings are saved here during processing
+temp_dir = "/tmp/dictation"
+
+# Keep temporary audio files after transcription
+# true = keep files (useful for debugging)
+# false = delete files after successful transcription (recommended)
+keep_temp_files = false
+
+# Lock file location (prevents duplicate instances)
+# CRITICAL: Do not change unless you understand lock file behavior
+# Changing this may break toggle functionality
+lock_file = "/tmp/dictation.lock"
+
+# ============================================================================
+# Advanced: Environment Variable Overrides
+# ============================================================================
+#
+# You can override any setting with environment variables:
+#
+#   export DICTATION_WHISPER_MODEL=tiny.en
+#   export DICTATION_AUDIO_DEVICE=hw:0
+#   export DICTATION_TYPING_DELAY=20
+#   export DICTATION_NOTIFICATIONS_ENABLED=false
+#
+# Environment variables take precedence over this TOML file.
+#
+# ============================================================================
+
+# ============================================================================
+# Troubleshooting Tips
+# ============================================================================
+#
+# Problem: No audio recording
+# Solution: Check audio device with:
+#   python -c "import sounddevice; print(sounddevice.query_devices())"
+#   Then set device = "correct_device_name" in [audio] section
+#
+# Problem: Slow transcription
+# Solution: Try tiny.en or base.en model, or use GPU with device = "cuda"
+#
+# Problem: Poor transcription accuracy
+# Solution: Try small.en or medium.en model (requires more RAM)
+#
+# Problem: Text not appearing in applications
+# Solution: 
+#   1. Increase typing_delay to 15-20 ms
+#   2. Try paste_method = "both" for clipboard + typing
+#   3. Ensure xdotool is installed: sudo pacman -S xdotool
+#
+# Problem: Notifications not showing
+# Solution: Ensure libnotify is installed: sudo pacman -S libnotify
+#
+# ============================================================================
+
+# ============================================================================
+# Example Configurations for Different Use Cases
+# ============================================================================
+
+# Fast dictation (CPU, low accuracy):
+#   [whisper]
+#   model = "tiny.en"
+#   compute_type = "int8"
+#
+# Best accuracy (GPU required):
+#   [whisper]
+#   model = "large-v3"
+#   device = "cuda"
+#   compute_type = "float16"
+#
+# Clipboard-only mode (no typing):
+#   [text]
+#   paste_method = "clipboard"
+#
+# Silent operation (no notifications):
+#   [notifications]
+#   enable = false
+#
+# Debugging mode (keep audio files):
+#   [files]
+#   keep_temp_files = true
+#
+# ============================================================================
+

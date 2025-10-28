@@ -1,17 +1,78 @@
 # Dependency Management Architecture
 
-**Version:** 1.0  
-**Date:** October 26, 2025  
-**Status:** Proposed  
-**Architect:** Winston
+**Version:** 2.0 (UV Migration)  
+**Date:** October 28, 2025  
+**Status:** Implemented  
+**Architect:** Winston  
+**Implementation:** v0.1.0
 
 ---
 
 ## Executive Summary
 
-This document defines the dependency management strategy for the automation-scripts project, which houses multiple Python-based automation modules with varying dependency requirements. The architecture prioritizes isolation from system packages, clear module boundaries, and operational simplicity while maintaining scalability as new automation modules are added.
+This document defines the dependency management strategy for the automation-scripts project, which houses multiple Python-based automation modules with varying dependency requirements. The architecture prioritizes reproducibility, fast installation, clear module boundaries, and operational simplicity.
 
-**Key Decision:** Project-level virtual environment with modular requirements organization.
+**Key Decision (v2.0):** UV package management with src-layout and locked dependencies.
+
+**Previous Approach (v1.0):** Project-level virtual environment with pip and requirements files.
+
+**Migration Status:** ✅ Completed in v0.1.0 (October 2025)
+
+---
+
+## 🚀 UV Architecture (v2.0 - Current)
+
+### Quick Reference
+
+**Package Manager:** UV (Astral)  
+**Package Structure:** src-layout  
+**Configuration:** pyproject.toml + uv.lock  
+**Installation Time:** < 1 second (cached), < 30 seconds (clean)
+
+### Core Components
+
+```
+automation-scripts/
+├── pyproject.toml              # Project definition (PEP 621)
+├── uv.lock                     # Locked dependencies with hashes
+├── src/automation_scripts/     # Src-layout package structure
+│   └── dictation/
+│       ├── __init__.py
+│       ├── __main__.py
+│       ├── dictate.py
+│       ├── config.py           # TOML configuration
+│       └── constants.py        # XDG paths
+└── config/
+    └── dictation.toml.example  # Example configuration
+```
+
+### Key Commands
+
+```bash
+# Install dependencies
+uv sync --extra dictation
+
+# Run module
+uv run dictation-toggle --start
+
+# Development
+uv sync --group dev --extra dictation
+uv run pytest
+```
+
+### Benefits Over Previous Approach
+
+| Aspect | v1.0 (pip/venv) | v2.0 (UV) |
+|--------|-----------------|-----------|
+| Installation | 5-10 minutes | < 30 seconds |
+| Reproducibility | Variable | 100% locked |
+| Activation | Manual `source` | Automatic |
+| Dependency Resolution | Manual | Automatic |
+| Lock File | None | uv.lock with hashes |
+
+### Migration
+
+See [docs/MIGRATION-TO-UV.md](../MIGRATION-TO-UV.md) for complete migration guide from v1.0 to v2.0.
 
 ---
 
@@ -27,6 +88,8 @@ This document defines the dependency management strategy for the automation-scri
 8. [Trade-offs & Alternatives](#trade-offs--alternatives)
 9. [Migration Strategy](#migration-strategy)
 10. [Future Considerations](#future-considerations)
+
+**Note:** Sections below describe the v1.0 architecture (pip/venv) for historical reference. Current implementation uses UV (v2.0) as described above.
 
 ---
 

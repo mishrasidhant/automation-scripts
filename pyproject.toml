@@ -1,0 +1,129 @@
+[project]
+name = "automation-scripts"
+version = "0.1.0"
+description = "A modular monorepo for managing system-level automation tools and scripts"
+authors = [
+    { name = "Sidhant Dixit", email = "mishrasidhant@example.com" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.11"
+keywords = ["automation", "dictation", "voice-to-text", "whisper", "system-automation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Desktop Environment",
+    "Topic :: Multimedia :: Sound/Audio :: Speech",
+]
+
+# Base dependencies (shared across modules)
+dependencies = []
+
+[project.optional-dependencies]
+# Voice dictation module dependencies
+dictation = [
+    "sounddevice>=0.4.6",    # Python audio I/O library (requires portaudio system package)
+    "numpy>=1.24.0",         # Audio data arrays and processing
+    "faster-whisper>=0.10.0", # Optimized Whisper transcription with CTranslate2
+    "requests>=2.31.0",      # HTTP library (required by faster-whisper, not declared as dependency)
+]
+
+# Development tools
+dev = [
+    "pytest>=7.4.0",         # Testing framework
+    "pytest-cov>=4.1.0",     # Coverage reporting
+    "pytest-mock>=3.11.0",   # Mocking utilities
+    "ruff>=0.1.0",           # Fast linter (replaces flake8, black, isort)
+    "mypy>=1.5.0",           # Type checker
+]
+
+[project.scripts]
+# CLI entry point for dictation module
+dictation-toggle = "automation_scripts.dictation:main"
+
+[project.urls]
+Homepage = "https://github.com/mishrasidhant/automation-scripts"
+Repository = "https://github.com/mishrasidhant/automation-scripts"
+Documentation = "https://github.com/mishrasidhant/automation-scripts/tree/main/docs"
+Issues = "https://github.com/mishrasidhant/automation-scripts/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+# UV workspace configuration for monorepo support
+
+[tool.uv.sources]
+# Use local source directory for development
+# This enables editable installation and proper import resolution
+
+[dependency-groups]
+# Development dependencies (replaces deprecated tool.uv.dev-dependencies)
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "ruff>=0.1.0",
+    "mypy>=1.5.0",
+]
+
+[tool.hatchling.build.targets.wheel]
+packages = ["src/automation_scripts"]
+
+[tool.ruff]
+# Ruff configuration for linting and formatting
+line-length = 100
+target-version = "py311"
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+]
+
+[tool.ruff.isort]
+known-first-party = ["automation_scripts"]
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false  # Start lenient, enable gradually
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "automation_scripts.dictation.*"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "modules"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+    "--cov=automation_scripts",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "slow: Tests that take a long time to run",
+]
+

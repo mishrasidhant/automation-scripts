@@ -148,37 +148,90 @@ Each module remains **self-contained** and **independent** of others until expli
 
 ## 📦 Setup
 
+### Prerequisites
+
+**UV Package Manager** (required):
+```bash
+# Install UV
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Restart your shell or run:
+source $HOME/.local/bin/env
+```
+
+**System Dependencies** (Arch/Manjaro):
+```bash
+# Required for dictation module
+sudo pacman -S portaudio xdotool libnotify
+```
+
 ### Quick Start
 
 ```bash
-# Clone repository
+# 1. Clone repository
 git clone https://github.com/mishrasidhant/automation-scripts.git
 cd automation-scripts
 
-# Set environment variable
-export AUTOMATION_SCRIPTS_DIR="$(pwd)"
+# 2. Install dependencies with UV (fast: < 30 seconds)
+uv sync --extra dictation
 
-# Add to your shell profile for persistence
-echo "export AUTOMATION_SCRIPTS_DIR=\"$HOME/path/to/automation-scripts\"" >> ~/.bashrc
-
-# Setup development environment
-source scripts/setup-dev.sh dictation
+# 3. Run dictation
+uv run dictation-toggle --start
+# Speak into your microphone...
+uv run dictation-toggle --stop
+# Text appears at your cursor!
 ```
 
-For complete setup instructions, see [ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md).
+### Configuration
 
-### Setting Up the Dictation Module
+Configuration is now managed via TOML files following XDG Base Directory specification:
 
 ```bash
-cd modules/dictation
-./setup.sh  # Installs dependencies and configures hotkey
-# Press Ctrl+' to start/stop dictation
+# Copy example configuration
+mkdir -p ~/.config/automation-scripts
+cp config/dictation.toml.example ~/.config/automation-scripts/dictation.toml
+
+# Edit configuration
+vim ~/.config/automation-scripts/dictation.toml
+
+# Or use environment variables for quick overrides
+export DICTATION_WHISPER_MODEL=tiny.en
+export DICTATION_TYPING_DELAY=20
+uv run dictation-toggle --start
 ```
 
-See [modules/dictation/README.md](modules/dictation/README.md) for detailed usage instructions.
+### Setting Up the Dictation Module with Hotkey
+
+To bind dictation to a keyboard shortcut (e.g., `Ctrl+'`):
+
+**XFCE (Manjaro default):**
+1. Open Settings → Keyboard → Application Shortcuts
+2. Add new shortcut
+3. Command: `/path/to/automation-scripts/scripts/dictation-toggle.sh`
+4. Key: Press `Ctrl+'` (or your preferred key combination)
+
+Now pressing `Ctrl+'` toggles recording!
+
+For complete setup instructions, see [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md).
+
+### Development Setup
+
+```bash
+# Setup development environment with UV
+source scripts/setup-dev.sh dictation
+
+# Run tests
+uv run pytest
+
+# Run linter
+uv run ruff check src/
+
+# Format code
+uv run ruff format src/
+```
 
 ---
 
-**Author:** Sidhant Dixit
-**License:** MIT
-**Version:** 0.0.1
+**Author:** Sidhant Dixit  
+**License:** MIT  
+**Version:** 0.1.0 (UV Migration Release)
