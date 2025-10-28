@@ -5,6 +5,52 @@ All notable changes to the automation-scripts dictation module will be documente
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2025-10-28 - Post-UV Migration Cleanup
+
+### 🧹 Cleanup
+
+**Removed Deprecated Directories:**
+- `modules/dictation/` - Old flat module structure (replaced by src/automation_scripts/dictation/)
+- `requirements/` - Old pip requirements (replaced by pyproject.toml + uv.lock)
+- `staging/` - Unused playground scripts
+- `htmlcov/` - Generated HTML coverage reports (not needed in repo)
+
+**Removed Outdated Documentation:**
+- `docs/ARCHITECTURE_SUMMARY.md` - Superseded by ARCHITECTURE.md
+- `docs/DICTATION_ARCHITECTURE.md` - Duplicate architecture documentation
+- `docs/current-state.md` - Temporary migration tracking file
+- `docs/SETUP_CHECKLIST.md` - Old pip-based setup (superseded by README.md)
+- `docs/CONFIGURATION_OPTIONS.md` - Old .env format (superseded by USER-GUIDE.md)
+- `docs/ENVIRONMENT_SETUP.md` - Manual venv setup (UV auto-manages)
+- `docs/SYSTEM_PROFILE.md` - Machine-specific, not general documentation
+- `docs/USER_PREFERENCES.md` - Redundant with USER-GUIDE.md
+
+### 📚 Documentation
+
+**Added:**
+- `docs/index.md` - Complete documentation index and navigation
+- `docs/stories/README.md` - Story documentation index with archive markers
+- `docs/qa/gates/README.md` - QA gate index with archive markers
+
+**Updated:**
+- All documentation now references UV-based workflows exclusively
+- Stories 1-7 clearly marked as "Archived (Pre-UV Era)"
+- QA gates DICT-001 through DICT-007 marked as archived
+
+### ✅ Validation
+
+**Test Results:**
+- Test suite: 58/58 tests passing (current UV-based tests)
+- Previous: 112 tests (included 54 deprecated tests in modules/dictation/)
+- Coverage: 31% (baseline maintained)
+- No breaking changes to active codebase
+- All imports working correctly
+- CLI commands operational
+- pyproject.toml updated: removed obsolete "modules" testpath
+
+**Story:** DICT-012 (Post-UV Cleanup)  
+**QA Gate:** PASS ✅
+
 ## [0.1.0] - 2025-10-28
 
 ### Added
