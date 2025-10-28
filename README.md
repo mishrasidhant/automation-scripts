@@ -204,15 +204,80 @@ uv run dictation-toggle --start
 
 To bind dictation to a keyboard shortcut (e.g., `Ctrl+'`):
 
-**XFCE (Manjaro default):**
+**Option 1: Automatic Setup with Systemd Service (Recommended)**
+
+The systemd service ensures your hotkey persists across reboots automatically:
+
+```bash
+# One-command installation
+./scripts/install-hotkey-service.sh
+
+# Verify installation
+systemctl --user status dictation-hotkey.service
+
+# Check diagnostic
+./scripts/check-hotkey-status.sh
+```
+
+The service will:
+- Register the keyboard shortcut (Ctrl+') automatically on every login
+- Ensure the hotkey works immediately after boot
+- Survive system reboots without manual reconfiguration
+
+**Option 2: Manual XFCE Setup (Legacy)**
+
+For manual setup without the systemd service:
+
 1. Open Settings → Keyboard → Application Shortcuts
 2. Add new shortcut
 3. Command: `/path/to/automation-scripts/scripts/dictation-toggle.sh`
 4. Key: Press `Ctrl+'` (or your preferred key combination)
 
+**Note:** Manual setup requires re-registration after each reboot due to XFCE settings daemon behavior. The systemd service (Option 1) solves this issue.
+
 Now pressing `Ctrl+'` toggles recording!
 
 For complete setup instructions, see [docs/ENVIRONMENT_SETUP.md](docs/ENVIRONMENT_SETUP.md).
+
+### Hotkey Persistence Troubleshooting
+
+If your keyboard shortcut stops working after a reboot:
+
+**Quick Fix (using systemd service):**
+```bash
+# Check service status
+systemctl --user status dictation-hotkey.service
+
+# Restart service if needed
+systemctl --user restart dictation-hotkey.service
+
+# Run comprehensive diagnostic
+./scripts/check-hotkey-status.sh
+```
+
+**Common Issues:**
+- **Service not installed:** Run `./scripts/install-hotkey-service.sh`
+- **Service not enabled:** Run `systemctl --user enable dictation-hotkey.service`
+- **xfsettingsd not running:** Check if XFCE desktop environment is running
+- **Permissions:** Ensure scripts are executable (`chmod +x scripts/*.sh`)
+
+**Uninstall systemd service:**
+```bash
+# Unregister hotkey
+./scripts/unregister-hotkey.sh
+
+# Disable and stop service
+systemctl --user disable --now dictation-hotkey.service
+
+# Optional: Remove files
+rm ~/.config/systemd/user/dictation-hotkey.service
+rm ~/.local/bin/{register,unregister}-hotkey.sh
+```
+
+For more details, see:
+- Service logs: `journalctl --user -u dictation-hotkey.service`
+- [UV Migration Guide](docs/MIGRATION-TO-UV.md) - Hotkey persistence section
+- [Story 9 Documentation](docs/stories/story-9-systemd-hotkey.md) - Technical details
 
 ### Development Setup
 

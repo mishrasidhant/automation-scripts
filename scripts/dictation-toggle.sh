@@ -59,3 +59,4 @@ exec uv run -m automation_scripts.dictation --toggle
 
 # Note: exec replaces the shell process, so exit code is from dictation module
 
+

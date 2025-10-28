@@ -1,0 +1,56 @@
+[Unit]
+# Dictation Keyboard Shortcut Registration Service
+#
+# Purpose: Ensures keyboard shortcut (Ctrl+') persists across reboots
+# by registering with xfconf-query and reloading xfsettingsd on login
+#
+# Installation: Copy to ~/.config/systemd/user/dictation-hotkey.service
+# Enable: systemctl --user enable dictation-hotkey.service
+# Start: systemctl --user start dictation-hotkey.service
+# Status: systemctl --user status dictation-hotkey.service
+# Logs: journalctl --user -u dictation-hotkey.service
+#
+Description=Dictation Keyboard Shortcut Registration
+Documentation=https://github.com/yourusername/automation-scripts
+
+# Wait for graphical session to be ready
+# This ensures XFCE desktop environment and xfsettingsd are available
+After=graphical-session.target
+
+[Service]
+# Service Type: oneshot
+# - Runs once per login
+# - Exits after registration complete
+# - RemainAfterExit=yes maintains "active" state to indicate success
+Type=oneshot
+RemainAfterExit=yes
+
+# Execute registration script
+# %h expands to user's home directory (e.g., /home/username)
+# Script handles:
+#   - Waiting for xfsettingsd availability (max 30s timeout)
+#   - Registering hotkey via xfconf-query
+#   - Reloading xfsettingsd with SIGHUP
+#   - Verification of registration
+ExecStart=%h/.local/bin/register-hotkey.sh
+
+# Restart policy: don't restart on failure
+# If registration fails, user can investigate via logs
+# Manual restart: systemctl --user restart dictation-hotkey.service
+Restart=no
+
+# Standard output/error handling
+# All output goes to systemd journal (viewable via journalctl)
+StandardOutput=journal
+StandardError=journal
+
+# Logging identifier for journal
+SyslogIdentifier=dictation-hotkey
+
+[Install]
+# WantedBy: default.target
+# This makes the service start automatically on user login
+# default.target is the standard user session target
+WantedBy=default.target
+
+
