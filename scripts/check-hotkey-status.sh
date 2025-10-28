@@ -282,7 +282,7 @@ else
         log_success "UV lock file exists (uv.lock)"
     else
         log_warning "UV lock file missing (uv.lock)"
-        log_info "Run: cd $PROJECT_ROOT && uv sync"
+        log_info "Run: cd $PROJECT_ROOT && uv sync --extra dictation"
     fi
     
     # Test module import

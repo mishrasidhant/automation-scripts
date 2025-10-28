@@ -1,0 +1,85 @@
+# ============================================================================
+# Performance-Optimized Dictation Configuration
+# ============================================================================
+#
+# This configuration prioritizes SPEED over accuracy.
+# Use when: You need fast transcription and can tolerate minor errors.
+#
+# Copy to: ~/.config/automation-scripts/dictation.toml
+#
+# Expected performance:
+#   - Transcription: ~1-2 seconds for 10s audio
+#   - Memory usage: ~1GB RAM
+#   - Accuracy: Good for clear speech, may struggle with accents/mumbling
+#
+# ============================================================================
+
+[whisper]
+# Use the smallest/fastest model
+model = "tiny.en"
+
+# CPU is fine for tiny model (very fast even without GPU)
+device = "cpu"
+
+# int8 is the fastest compute type
+compute_type = "int8"
+
+# Minimal beam search for speed
+# 1 = no beam search, just take the most likely transcription
+beam_size = 1
+
+# Deterministic output (recommended)
+temperature = 0.0
+
+# VAD filter helps remove silence quickly
+vad_filter = true
+
+[audio]
+# Use default microphone
+device = "default"
+sample_rate = 16000
+channels = 1
+
+[text]
+# xdotool for automatic typing
+paste_method = "xdotool"
+
+# Fastest safe typing speed
+# Lower values may cause missed characters
+typing_delay = 5
+
+# Minimal text processing for speed
+auto_capitalize = false
+strip_spaces = true
+add_period = false
+
+[notifications]
+# Quick notifications
+enable = true
+tool = "notify-send"
+urgency = "low"
+timeout = 2000  # 2 seconds (shorter than default)
+
+[files]
+# Clean up immediately to save disk I/O
+temp_dir = "/tmp/dictation"
+keep_temp_files = false
+lock_file = "/tmp/dictation.lock"
+
+# ============================================================================
+# Performance Tips
+# ============================================================================
+#
+# Further optimization:
+#   1. First model load is slow (downloads ~75MB)
+#   2. Subsequent uses are fast (model cached)
+#   3. Consider upgrading to base.en if accuracy is poor
+#   4. GPU (device = "cuda") would be even faster
+#
+# Troubleshooting slow performance:
+#   - Check CPU usage during transcription
+#   - Ensure no other heavy processes running
+#   - Try increasing beam_size to 2-3 if accuracy suffers
+#
+# ============================================================================
+

@@ -1,0 +1,103 @@
+# ============================================================================
+# Accuracy-Optimized Dictation Configuration
+# ============================================================================
+#
+# This configuration prioritizes ACCURACY over speed.
+# Use when: You need precise transcription and can wait a bit longer.
+#
+# Copy to: ~/.config/automation-scripts/dictation.toml
+#
+# Expected performance:
+#   - Transcription: ~5-8 seconds for 10s audio (CPU)
+#   - Memory usage: ~3GB RAM
+#   - Accuracy: Excellent for most speech, handles accents well
+#
+# ============================================================================
+
+[whisper]
+# Use small model for better accuracy than base
+# (medium.en would be even better but much slower)
+model = "small.en"
+
+# CPU works but GPU highly recommended for this model
+device = "cpu"
+
+# float16 provides better precision than int8
+# Use float16 on GPU, or stick with int8 on CPU for reasonable speed
+compute_type = "float16"
+
+# Higher beam search = more thorough analysis
+# 10 is maximum recommended value
+beam_size = 10
+
+# Deterministic output (recommended for dictation)
+temperature = 0.0
+
+# VAD filter removes silence/noise
+vad_filter = true
+
+# Enable language detection if needed
+# For English-only, leave as "en" for best accuracy
+language = "en"
+
+[audio]
+# Use default microphone (or specify your best quality mic)
+device = "default"
+
+# Whisper requires exactly 16kHz
+sample_rate = 16000
+
+# Mono audio (required by Whisper)
+channels = 1
+
+[text]
+# Use both methods for maximum reliability
+# Text will be typed AND copied to clipboard
+paste_method = "both"
+
+# Slower typing for maximum reliability
+# Higher delay reduces chance of missed characters
+typing_delay = 15
+
+# Apply text improvements
+auto_capitalize = true  # Capitalize first letter
+strip_spaces = true     # Clean whitespace
+add_period = false      # Keep original punctuation
+
+[notifications]
+# Full notifications to confirm transcription
+enable = true
+tool = "notify-send"
+urgency = "normal"
+timeout = 4000  # 4 seconds (longer to read)
+
+[files]
+# Keep temp files for quality review/debugging
+temp_dir = "/tmp/dictation"
+keep_temp_files = true
+lock_file = "/tmp/dictation.lock"
+
+# ============================================================================
+# Accuracy Tips
+# ============================================================================
+#
+# For best results:
+#   1. Speak clearly and at moderate pace
+#   2. Use a good quality microphone (USB recommended over built-in)
+#   3. Minimize background noise
+#   4. Pause briefly for punctuation
+#   5. Consider medium.en or large-v3 for technical/specialized terms
+#
+# If using GPU (10x faster with large models):
+#   device = "cuda"
+#   compute_type = "float16"
+#   model = "medium.en"  # or "large-v3" for best quality
+#
+# Troubleshooting poor accuracy:
+#   - Test with: python -c "import sounddevice; print(sounddevice.query_devices())"
+#   - Check audio device selection in [audio] section
+#   - Ensure microphone volume is adequate (not clipping, not too quiet)
+#   - Try recording a test file to verify audio quality
+#
+# ============================================================================
+

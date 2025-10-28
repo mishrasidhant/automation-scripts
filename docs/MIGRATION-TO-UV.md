@@ -551,3 +551,139 @@ Print this out or check off as you go:
 
 **Happy dictating! 🎤**
 
+---
+
+## 🎉 What's New in Stories 9-10.6 (Post-UV Migration)
+
+After the initial UV migration (Story 8), several critical improvements were made to enhance reliability, diagnostics, and usability.
+
+### Story 9: Systemd Service for Hotkey Persistence
+
+**What Changed:**
+- **Hotkey now persists across reboots** via systemd user service
+- Automatic hotkey registration on login
+- No more manual re-registration after restart
+
+**New Files:**
+- `systemd/dictation-hotkey.service` - User service definition
+- `scripts/install-hotkey-service.sh` - One-command installation
+- `scripts/register-hotkey.sh` - Hotkey registration script
+- `scripts/unregister-hotkey.sh` - Hotkey removal script
+
+**Migration Steps:**
+
+```bash
+# Install the new systemd service (one-time setup)
+cd /path/to/automation-scripts
+./scripts/install-hotkey-service.sh
+
+# Verify installation
+systemctl --user status dictation-hotkey.service
+
+# Should show "active (exited)" status
+```
+
+**Benefits:**
+- Hotkey works immediately after boot
+- No manual intervention needed
+- Survives system updates
+- Easy to manage with systemctl
+
+### Story 10: SIGTERM Hang Fix
+
+**What Changed:**
+- **Fixed critical bug** where SIGTERM would hang the recording process indefinitely
+- Graceful cleanup when stopping recordings
+- Proper signal handling with flag-based cleanup
+
+**User Impact:**
+- Recordings now stop instantly when you press `Ctrl+'` again
+- No more orphaned processes
+- No stale lock files
+- Better error handling
+
+### Story 10.5: First-Run Startup Reliability
+
+**What Changed:**
+- **Auto-sync UV environment** on first run after boot
+- Automatic detection of out-of-sync dependencies
+- Better error messages when environment needs setup
+
+**User Impact:**
+- First use after boot "just works"
+- No more "module not found" errors
+- Seamless experience after system updates
+
+### Story 10.6: Enhanced Diagnostics
+
+**What Changed:**
+- **Comprehensive diagnostic tool** added: `check-hotkey-status.sh`
+- Multi-layered health checks
+- Clear, actionable error messages
+
+**Try it:**
+```bash
+./scripts/check-hotkey-status.sh
+```
+
+### Story 11: Advanced Configuration, Testing & Documentation
+
+**What Changed:**
+- **Complete test suite** with 58 passing tests
+- **Comprehensive documentation** (ARCHITECTURE, USER-GUIDE, TROUBLESHOOTING, DEVELOPMENT)
+- **Configuration examples** for different use cases (minimal, performance, accuracy)
+
+**New Resources:**
+```bash
+# Explore configuration examples
+ls config/dictation-*.toml
+
+# Run test suite
+uv run pytest
+
+# Read documentation
+cat docs/USER-GUIDE.md
+cat docs/TROUBLESHOOTING.md
+```
+
+---
+
+## 🎯 Recommended Actions After Migration
+
+After migrating to UV, we recommend:
+
+**1. Install Systemd Service** (Story 9):
+```bash
+./scripts/install-hotkey-service.sh
+```
+
+**2. Run Diagnostic Check** (Story 10.6):
+```bash
+./scripts/check-hotkey-status.sh
+```
+
+**3. Review Configuration Examples** (Story 11):
+```bash
+# Copy one that fits your needs
+cp config/dictation-performance.toml ~/.config/automation-scripts/dictation.toml
+```
+
+**4. Test After Reboot**:
+- Restart your computer
+- Press `Ctrl+'` immediately after login
+- Should work without any manual setup!
+
+---
+
+## 🔄 Breaking Changes: None!
+
+**All changes from Stories 9-11 are backward compatible.**
+
+You can safely upgrade without breaking anything!
+
+---
+
+**Document Version:** 2.0  
+**Last Updated:** October 28, 2025  
+**Includes:** Stories 8-11 (UV Migration through Testing & Documentation)
+

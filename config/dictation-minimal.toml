@@ -1,0 +1,42 @@
+# ============================================================================
+# Minimal Dictation Configuration
+# ============================================================================
+#
+# This is a bare-minimum configuration for the dictation module.
+# All other settings will use their default values.
+#
+# Copy to: ~/.config/automation-scripts/dictation.toml
+#
+# Use this when:
+#   - You want the simplest possible setup
+#   - You're okay with all default settings
+#   - You just need to specify the model to use
+#
+# ============================================================================
+
+[whisper]
+# Required: Specify which speech recognition model to use
+# The base.en model provides a good balance of speed and accuracy
+model = "base.en"
+
+# ============================================================================
+# That's it! All other settings will use defaults:
+# ============================================================================
+#
+# Defaults used:
+#   - Device: CPU
+#   - Compute type: int8 (fast, good accuracy)
+#   - Audio device: System default microphone
+#   - Paste method: xdotool (automatic typing)
+#   - Typing delay: 12ms
+#   - Notifications: Enabled
+#   - Temp files: Deleted after transcription
+#
+# To see all default values, run:
+#   uv run python -m automation_scripts.dictation.config
+#
+# For more options, see:
+#   config/dictation.toml.example (complete example with all settings)
+#
+# ============================================================================
+
