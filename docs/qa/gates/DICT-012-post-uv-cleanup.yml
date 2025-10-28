@@ -16,7 +16,6 @@ test_environment:
   os: Linux (Manjaro 6.6.107-1-MANJARO)
   python_version: "3.13.7"
   package_manager: UV
-  project_root: /home/sdx/Files/W/Workspace/git/automation-scripts
 
 baseline_info:
   pre_cleanup_tests: 112 (58 current + 54 deprecated in modules/)

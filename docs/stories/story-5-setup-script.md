@@ -421,7 +421,7 @@ The following system packages need to be installed:
 
 Install now with pacman? (y/n) y
 
-[sudo] password for sdx: 
+[sudo] password for <user>: 
 resolving dependencies...
 ✓ System dependencies installed
 
