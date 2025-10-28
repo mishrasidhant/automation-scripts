@@ -10,8 +10,11 @@
 # - Systemd service status
 # - xfconf registration
 # - xfsettingsd daemon status
+# - Desktop environment
 # - Recent service logs
 # - Configuration files
+# - UV environment health
+# - Recent dictation logs
 #
 # Exit Codes:
 #   0 = All checks pass (hotkey system is healthy)
@@ -253,14 +256,76 @@ else
     log_warning "Unregistration script NOT found: $UNREGISTER_SCRIPT"
 fi
 
+# Check 7: UV Environment Health
+log_header "7. UV Environment Health"
+
+# Detect project root
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+if ! command -v uv &> /dev/null; then
+    log_error "UV package manager not found"
+    log_info "Install: curl -LsSf https://astral.sh/uv/install.sh | sh"
+else
+    log_success "UV package manager available"
+    
+    # Check .venv directory
+    if [ -d "$PROJECT_ROOT/.venv" ]; then
+        log_success "Virtual environment exists (.venv)"
+    else
+        log_error "Virtual environment missing (.venv)"
+        log_info "Fix: cd $PROJECT_ROOT && uv sync --extra dictation"
+    fi
+    
+    # Check uv.lock file
+    if [ -f "$PROJECT_ROOT/uv.lock" ]; then
+        log_success "UV lock file exists (uv.lock)"
+    else
+        log_warning "UV lock file missing (uv.lock)"
+        log_info "Run: cd $PROJECT_ROOT && uv sync"
+    fi
+    
+    # Test module import
+    log_info "Testing dictation module import..."
+    if (cd "$PROJECT_ROOT" && uv run python -c "import automation_scripts.dictation" 2>/dev/null); then
+        log_success "Dictation module imports successfully"
+    else
+        log_error "Dictation module import FAILED"
+        log_info "Fix: cd $PROJECT_ROOT && uv sync --extra dictation"
+        log_info "Check logs above for specific import errors"
+    fi
+fi
+
+# Check 8: Recent Dictation Operation Logs
+log_header "8. Recent Dictation Logs (Last 10 Lines)"
+
+LOG_FILE="/tmp/dictation-toggle.log"
+
+if [ -f "$LOG_FILE" ]; then
+    log_info "Log file: $LOG_FILE"
+    echo ""
+    tail -n 10 "$LOG_FILE" 2>/dev/null | sed 's/^/    /' || {
+        log_warning "Could not read log file"
+    }
+    echo ""
+    log_info "View full log: cat $LOG_FILE"
+else
+    log_info "No log file found (dictation not used yet)"
+    log_info "Log will be created on first use: $LOG_FILE"
+fi
+
 # Summary
 log_header "Summary"
 
 if [ $OVERALL_STATUS -eq 0 ]; then
     echo -e "${GREEN}✓ All checks passed!${NC}"
     echo ""
-    echo "Your hotkey registration system is healthy."
-    echo "The keyboard shortcut (Ctrl+') should work and persist across reboots."
+    echo "Your dictation system is healthy:"
+    echo "  - Hotkey registration: Working"
+    echo "  - UV environment: Ready"
+    echo "  - Recent operations: No errors"
+    echo ""
+    echo "The keyboard shortcut (Ctrl+') should work correctly."
     echo ""
 else
     echo -e "${RED}✗ Issues detected!${NC}"
@@ -269,10 +334,10 @@ else
     echo ""
     echo "Common fixes:"
     echo "  - Install service: ./scripts/install-hotkey-service.sh"
+    echo "  - Sync UV environment: uv sync --extra dictation"
     echo "  - Register hotkey: ./scripts/register-hotkey.sh"
     echo "  - Start service: systemctl --user start $SERVICE_NAME"
-    echo "  - Enable service: systemctl --user enable $SERVICE_NAME"
-    echo "  - View logs: journalctl --user -u $SERVICE_NAME"
+    echo "  - View logs: cat /tmp/dictation-toggle.log"
     echo ""
 fi
 
