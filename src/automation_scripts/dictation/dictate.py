@@ -414,6 +414,7 @@ class DictationRecorder:
         self.audio_data = []
         self.stream = None
         self.recording = False
+        self.stop_requested = False  # Flag for graceful shutdown
         self.audio_file = None
         self.started_at = None
 
@@ -539,6 +540,10 @@ class DictationRecorder:
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
+        # Initialize stop flag
+        self.stop_requested = False
+        exit_code = 0
+
         # Start audio recording
         try:
             self.audio_data = []
@@ -567,6 +572,19 @@ class DictationRecorder:
             # The recording happens in the callback thread
             while self.recording:
                 time.sleep(0.1)
+            
+            # Recording loop ended - handle cleanup in main thread context
+            # This is safer than doing cleanup in the signal handler
+            if self.stop_requested:
+                # Skip explicit stream stop - let OS clean up on exit
+                # sounddevice stream.stop() can hang, and OS cleanup is safe
+                self.stream = None  # Release reference
+                
+                # Save audio data in main thread (not in signal handler)
+                if self._save_audio_data():
+                    exit_code = 0
+                else:
+                    exit_code = 1
 
         except sd.PortAudioError as e:
             print(f"Error: Audio device error: {e}", file=sys.stderr)
@@ -575,10 +593,7 @@ class DictationRecorder:
                 f"Audio device error: {e}",
                 urgency="critical"
             )
-            # Clean up lock file
-            if LOCK_FILE.exists():
-                LOCK_FILE.unlink()
-            return 1
+            exit_code = 1
         except Exception as e:
             print(f"Error: Unexpected error during recording: {e}", file=sys.stderr)
             self._send_notification(
@@ -586,12 +601,14 @@ class DictationRecorder:
                 f"Recording error: {e}",
                 urgency="critical"
             )
-            # Clean up lock file
+            exit_code = 1
+        finally:
+            # Always clean up lock file (in main thread context)
             if LOCK_FILE.exists():
                 LOCK_FILE.unlink()
-            return 1
 
-        return 0
+        # Exit with appropriate code
+        sys.exit(exit_code)
 
     def stop_recording(self):
         """Stop audio recording by signaling the recording process."""
@@ -718,26 +735,14 @@ class DictationRecorder:
             return False
 
     def _signal_handler(self, signum, frame):
-        """Handle termination signals by saving audio and exiting."""
+        """Handle termination signals by setting flag for graceful shutdown.
+        
+        This handler only sets flags - cleanup happens in the main loop.
+        This is safer than doing heavy I/O or stream operations in signal context.
+        """
         print("\n\nRecording interrupted by signal")
         self.recording = False
-        
-        # Stop the audio stream
-        if self.stream and self.stream.active:
-            self.stream.stop()
-            self.stream.close()
-        
-        # Save audio data
-        if self._save_audio_data():
-            # Remove lock file
-            if LOCK_FILE.exists():
-                LOCK_FILE.unlink()
-            sys.exit(0)
-        else:
-            # Remove lock file even if save failed
-            if LOCK_FILE.exists():
-                LOCK_FILE.unlink()
-            sys.exit(1)
+        self.stop_requested = True
 
 
 def cleanup_stale_lock():
