@@ -869,28 +869,75 @@ def handle_toggle():
                 urgency="normal"
             )
             
-            if paste_text_xdotool(text):
-                _send_notification_static(
-                    "✅ Dictation",
-                    f"Done! Pasted {word_count} words",
-                    urgency="normal"
-                )
-            else:
-                # Fallback to clipboard
-                if copy_to_clipboard(text):
-                    _send_notification_static(
-                        "⚠️ Dictation",
-                        f"Text copied to clipboard ({word_count} words)\nPaste manually with Ctrl+V",
-                        urgency="normal"
-                    )
+            paste_method = CONFIG.get('paste_method', 'xdotool')
+            xdotool_success = False
+            clipboard_success = False
+            
+            # Handle paste_method = "both" - copy to clipboard first, then type
+            if paste_method in ('both', 'clipboard'):
+                clipboard_success = copy_to_clipboard(text)
+                if paste_method == 'clipboard':
+                    if clipboard_success:
+                        _send_notification_static(
+                            "✅ Dictation",
+                            f"Text copied to clipboard ({word_count} words)\nPaste manually with Ctrl+V",
+                            urgency="normal"
+                        )
+                    else:
+                        _send_notification_static(
+                            "❌ Dictation Error",
+                            "Failed to copy to clipboard",
+                            urgency="critical"
+                        )
+                    cleanup_stale_lock()
+                    if not CONFIG.get('keep_temp', False) and Path(audio_file).exists():
+                        try:
+                            Path(audio_file).unlink()
+                        except Exception as e:
+                            print(f"Warning: Could not delete audio file: {e}", file=sys.stderr)
+                    return 0 if clipboard_success else 1
+            
+            # Handle paste_method = "xdotool" or "both" - type the text
+            if paste_method in ('both', 'xdotool'):
+                xdotool_success = paste_text_xdotool(text)
+                if xdotool_success:
+                    if paste_method == 'both':
+                        _send_notification_static(
+                            "✅ Dictation",
+                            f"Done! Pasted {word_count} words (also in clipboard)",
+                            urgency="normal"
+                        )
+                    else:
+                        _send_notification_static(
+                            "✅ Dictation",
+                            f"Done! Pasted {word_count} words",
+                            urgency="normal"
+                        )
                 else:
-                    # Last resort: show in notification
-                    preview = text[:100] + ("..." if len(text) > 100 else "")
-                    _send_notification_static(
-                        "⚠️ Dictation",
-                        f"Could not paste or copy to clipboard.\nText: {preview}",
-                        urgency="critical"
-                    )
+                    # xdotool failed
+                    if paste_method == 'both' and clipboard_success:
+                        # At least clipboard worked
+                        _send_notification_static(
+                            "⚠️ Dictation",
+                            f"Typing failed, but text copied to clipboard ({word_count} words)\nPaste manually with Ctrl+V",
+                            urgency="normal"
+                        )
+                    elif paste_method == 'xdotool':
+                        # Fallback to clipboard
+                        if copy_to_clipboard(text):
+                            _send_notification_static(
+                                "⚠️ Dictation",
+                                f"Typing failed, text copied to clipboard ({word_count} words)\nPaste manually with Ctrl+V",
+                                urgency="normal"
+                            )
+                        else:
+                            # Last resort: show in notification
+                            preview = text[:100] + ("..." if len(text) > 100 else "")
+                            _send_notification_static(
+                                "❌ Dictation Error",
+                                f"Could not paste or copy to clipboard.\nText: {preview}",
+                                urgency="critical"
+                            )
             
             # Clean up
             cleanup_stale_lock()
@@ -900,7 +947,7 @@ def handle_toggle():
                 except Exception as e:
                     print(f"Warning: Could not delete audio file: {e}", file=sys.stderr)
             
-            return 0
+            return 0 if (xdotool_success or clipboard_success) else 1
             
         except Exception as e:
             error_msg = str(e)
