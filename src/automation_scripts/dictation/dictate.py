@@ -30,6 +30,8 @@ from .constants import (
     LOCK_FILE as CONST_LOCK_FILE,
     TEMP_DIR as CONST_TEMP_DIR,
     MODEL_CACHE_DIR,
+    DEFAULT_PASTE_METHOD,
+    DEFAULT_TYPING_DELAY,
 )
 
 # Check for required dependencies
@@ -82,8 +84,8 @@ CONFIG = {
     'channels': RAW_CONFIG.get('audio', {}).get('channels', 1),
     
     # Text processing
-    'paste_method': RAW_CONFIG.get('text', {}).get('paste_method', 'xdotool'),
-    'typing_delay': RAW_CONFIG.get('text', {}).get('typing_delay', 12),
+    'paste_method': RAW_CONFIG.get('text', {}).get('paste_method', DEFAULT_PASTE_METHOD),
+    'typing_delay': RAW_CONFIG.get('text', {}).get('typing_delay', DEFAULT_TYPING_DELAY),
     'clear_modifiers': os.environ.get('DICTATION_CLEAR_MODIFIERS', 'true').lower() == 'true',
     'strip_leading': RAW_CONFIG.get('text', {}).get('strip_spaces', True),
     'strip_trailing': RAW_CONFIG.get('text', {}).get('strip_spaces', True),

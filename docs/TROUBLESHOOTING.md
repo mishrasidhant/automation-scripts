@@ -591,6 +591,48 @@ sudo pacman -S python  # Arch/Manjaro
 sudo apt install python3.11  # Ubuntu/Debian
 ```
 
+### Issue: Python Version Too New (3.14+)
+
+**Symptoms**:
+```
+error: Distribution `ctranslate2==4.6.0 @ registry+https://pypi.org/simple` can't be installed
+because it doesn't have a source distribution or wheel for the current platform
+
+hint: You're using CPython 3.14 (`cp314`), but `ctranslate2` (v4.6.0) only has wheels with
+the following Python ABI tags: `cp311`, `cp312`, `cp313`
+```
+
+**Why This Happens**:
+- This project requires Python 3.11-3.13 for now
+- The speech recognition backend (`faster-whisper`) depends on `ctranslate2`
+- `ctranslate2==4.6.0` doesn't have wheels for Python 3.14 yet
+- The maintainers need to build and release 3.14-compatible wheels
+
+**Workaround 1**: Use Python 3.13 (recommended - one-time setup)
+```bash
+# Run this ONCE to pin UV to Python 3.13
+uv sync --python 3.13 --extra dictation
+
+# Verify it worked
+uv run python --version  # Should show Python 3.13.x
+```
+
+**Why this works across reboots:**
+- UV stores the Python version choice in `.venv/` directory
+- After rebooting, all `uv run` and `uv sync` commands automatically use Python 3.13
+- No need to specify `--python 3.13` again
+- This persists even after system restart
+
+**Workaround 2**: Wait for ctranslate2 to support Python 3.14
+- Monitor: https://github.com/OpenNMT/CTranslate2/releases
+- Once 3.14-compatible wheels are released, remove the `<3.14` constraint in `pyproject.toml`
+
+**Workaround 3**: Check if a newer faster-whisper version helps
+```bash
+# See if a newer faster-whisper version has better Python 3.14 support
+# (This is a future workaround, not available yet)
+```
+
 ### Issue: UV Sync Fails
 
 **Symptoms**:

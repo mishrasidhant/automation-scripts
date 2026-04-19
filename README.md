@@ -16,7 +16,7 @@ Fast, accurate voice dictation using Whisper AI with seamless hotkey integration
 
 - **OS**: Linux (Manjaro/Arch tested, should work on Ubuntu/Debian/Fedora)
 - **Desktop**: XFCE with X11 (Wayland not supported yet)
-- **Python**: 3.11+ (for tomllib stdlib)
+- **Python**: 3.11-3.13 (3.14+ not yet supported - waiting for ctranslate2 wheel builds)
 - **System Packages**: portaudio, xdotool, libnotify
 
 ## 🚀 Quick Start (5 Minutes)

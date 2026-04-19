@@ -83,12 +83,12 @@ DEFAULT_AUDIO_FORMAT = 'wav'
 # =============================================================================
 
 # Text injection method: 'xdotool', 'clipboard', 'both'
-DEFAULT_PASTE_METHOD = 'xdotool'
+DEFAULT_PASTE_METHOD = 'clipboard'
 
 # Delay in milliseconds between keystrokes when typing
 # Lower = faster typing, but may cause issues
 # Higher = slower but more reliable
-DEFAULT_TYPING_DELAY = 12
+DEFAULT_TYPING_DELAY = 5
 
 # Post-processing options
 DEFAULT_AUTO_CAPITALIZE = False
