@@ -208,11 +208,18 @@ def test_validate_config_typing_delay_out_of_range(sample_config):
 def test_validate_config_invalid_paste_method(sample_config):
     """Test validation catches invalid paste method."""
     sample_config['text']['paste_method'] = 'invalid-method'
-    
+
     with pytest.raises(ConfigurationError) as exc_info:
         config.validate_config(sample_config)
-    
+
     assert 'paste_method' in str(exc_info.value).lower()
+
+
+@pytest.mark.parametrize('method', ['xdotool', 'clipboard', 'both', 'clipboard_key'])
+def test_validate_config_accepts_known_paste_methods(sample_config, method):
+    """Every paste method the dispatch code understands must pass validation."""
+    sample_config['text']['paste_method'] = method
+    config.validate_config(sample_config)  # must not raise
 
 
 def test_validate_config_invalid_urgency(sample_config):

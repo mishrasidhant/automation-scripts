@@ -182,6 +182,7 @@ def test_default_constants_exist():
     
     # Text defaults
     assert hasattr(constants, 'DEFAULT_PASTE_METHOD')
+    assert hasattr(constants, 'DEFAULT_PASTE_KEY')
     assert hasattr(constants, 'DEFAULT_TYPING_DELAY')
     assert hasattr(constants, 'DEFAULT_AUTO_CAPITALIZE')
     assert hasattr(constants, 'DEFAULT_STRIP_SPACES')
@@ -210,7 +211,9 @@ def test_default_values_are_sensible():
     assert constants.DEFAULT_CHANNELS == 1  # Whisper requirement
     
     # Text
-    assert constants.DEFAULT_PASTE_METHOD in ['xdotool', 'clipboard', 'both']
+    assert constants.DEFAULT_PASTE_METHOD in ['xdotool', 'clipboard', 'both', 'clipboard_key']
+    assert isinstance(constants.DEFAULT_PASTE_KEY, str)
+    assert constants.DEFAULT_PASTE_KEY  # non-empty
     assert isinstance(constants.DEFAULT_TYPING_DELAY, int)
     assert constants.DEFAULT_TYPING_DELAY > 0
 
@@ -291,6 +294,7 @@ def test_default_config_text_section():
     text = constants.DEFAULT_CONFIG['text']
     
     assert 'paste_method' in text
+    assert 'paste_key' in text
     assert 'typing_delay' in text
     assert 'auto_capitalize' in text
     assert 'strip_spaces' in text
