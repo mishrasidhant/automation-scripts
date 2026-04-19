@@ -120,7 +120,7 @@ fi
 # Execute dictation module with UV
 # UV automatically activates the virtual environment and uses locked dependencies
 log_message "INFO: Launching dictation module..."
-exec uv run -m automation_scripts.dictation --toggle
+exec uv run -m automation_scripts.dictation --toggle >> "$LOG_FILE" 2>&1
 
 # Note: exec replaces the shell process, so exit code is from dictation module
 

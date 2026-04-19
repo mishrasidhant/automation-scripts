@@ -431,13 +431,16 @@ def paste_text_clipboard_key(text: str) -> bool:
         )
         return True
     except subprocess.TimeoutExpired:
+        print(f"[dictation] xdotool key {combo!r} timed out", file=sys.stderr, flush=True)
         _send_notification_static("❌ Dictation Error", "Paste keystroke timed out", urgency="critical")
         return False
     except FileNotFoundError:
+        print("[dictation] xdotool not found", file=sys.stderr, flush=True)
         _send_notification_static("❌ Dictation Error", "xdotool not installed. Install with: sudo pacman -S xdotool", urgency="critical")
         return False
     except subprocess.CalledProcessError as e:
-        error_msg = e.stderr if e.stderr else "Unknown error"
+        error_msg = (e.stderr or "").strip() or "Unknown error"
+        print(f"[dictation] xdotool key {combo!r} failed rc={e.returncode}: {error_msg}", file=sys.stderr, flush=True)
         _send_notification_static("❌ Dictation Error", f"Paste keystroke failed: {error_msg}", urgency="critical")
         return False
 
@@ -455,29 +458,33 @@ def copy_to_clipboard(text: str) -> bool:
     if not text:
         return False
         
+    # xclip/xsel fork a daemon child that inherits open fds. If we leave
+    # stdout/stderr captured by Python, that daemon holds the pipe ends
+    # open and subprocess.run() blocks until timeout. DEVNULL avoids it.
     try:
-        # Try xclip first (most common)
         subprocess.run(
             ["xclip", "-selection", "clipboard"],
             input=text.encode('utf-8'),
             check=True,
-            capture_output=True,
-            timeout=5
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=5,
         )
         return True
     except (subprocess.CalledProcessError, FileNotFoundError):
-        # Try xsel as fallback
         try:
             subprocess.run(
                 ["xsel", "--clipboard", "--input"],
                 input=text.encode('utf-8'),
                 check=True,
-                capture_output=True,
-                timeout=5
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=5,
             )
             return True
         except (subprocess.CalledProcessError, FileNotFoundError):
-            # No clipboard tool available
+            return False
+        except subprocess.TimeoutExpired:
             return False
     except subprocess.TimeoutExpired:
         return False
