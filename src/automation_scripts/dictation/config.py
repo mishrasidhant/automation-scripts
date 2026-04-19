@@ -251,7 +251,7 @@ def validate_config(config: Dict[str, Any]) -> None:
         )
     
     # Validate paste method
-    valid_paste_methods = ['xdotool', 'clipboard', 'both']
+    valid_paste_methods = ['xdotool', 'clipboard', 'both', 'clipboard_key']
     paste_method = config.get('text', {}).get('paste_method', '')
     if paste_method and paste_method not in valid_paste_methods:
         errors.append(
