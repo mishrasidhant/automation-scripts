@@ -31,6 +31,7 @@ from .constants import (
     TEMP_DIR as CONST_TEMP_DIR,
     MODEL_CACHE_DIR,
     DEFAULT_PASTE_METHOD,
+    DEFAULT_PASTE_KEY,
     DEFAULT_TYPING_DELAY,
 )
 
@@ -85,6 +86,7 @@ CONFIG = {
     
     # Text processing
     'paste_method': RAW_CONFIG.get('text', {}).get('paste_method', DEFAULT_PASTE_METHOD),
+    'paste_key': RAW_CONFIG.get('text', {}).get('paste_key', DEFAULT_PASTE_KEY),
     'typing_delay': RAW_CONFIG.get('text', {}).get('typing_delay', DEFAULT_TYPING_DELAY),
     'clear_modifiers': os.environ.get('DICTATION_CLEAR_MODIFIERS', 'true').lower() == 'true',
     'strip_leading': RAW_CONFIG.get('text', {}).get('strip_spaces', True),
@@ -363,6 +365,80 @@ def paste_text_xdotool(text: str) -> bool:
         return False
     except Exception as e:
         _send_notification_static("❌ Dictation Error", f"Text injection error: {e}", urgency="critical")
+        return False
+
+
+# Substrings (case-insensitive) that identify a terminal emulator via xdotool
+# getwindowclassname. Terminals treat Ctrl+V as a literal insert; they need
+# Ctrl+Shift+V to paste.
+_TERMINAL_CLASS_HINTS = (
+    'xfce4-terminal', 'xterm', 'urxvt', 'rxvt', 'alacritty', 'kitty',
+    'wezterm', 'gnome-terminal', 'terminator', 'konsole', 'tilix',
+    'termite', 'foot',
+)
+
+
+def _detect_paste_combo() -> str:
+    """Return the paste keystroke appropriate for the focused window."""
+    try:
+        active = subprocess.run(
+            ["xdotool", "getactivewindow"],
+            check=True, capture_output=True, text=True, timeout=2,
+        ).stdout.strip()
+        if not active:
+            return 'ctrl+v'
+        cls = subprocess.run(
+            ["xdotool", "getwindowclassname", active],
+            check=True, capture_output=True, text=True, timeout=2,
+        ).stdout.strip().lower()
+    except (subprocess.SubprocessError, FileNotFoundError):
+        return 'ctrl+v'
+    return 'ctrl+shift+v' if any(h in cls for h in _TERMINAL_CLASS_HINTS) else 'ctrl+v'
+
+
+def paste_text_clipboard_key(text: str) -> bool:
+    """
+    Paste text by copying to clipboard and sending a paste keystroke.
+
+    One atomic keystroke instead of per-char typing — avoids the xdotool `type`
+    race conditions that cause dropped chars or stuck-key runs.
+
+    Returns:
+        True if both clipboard copy and keystroke succeeded, False otherwise.
+    """
+    if not text:
+        return False
+
+    if not copy_to_clipboard(text):
+        return False
+
+    configured = str(CONFIG.get('paste_key', DEFAULT_PASTE_KEY)).strip() or 'auto'
+    combo = _detect_paste_combo() if configured == 'auto' else configured
+
+    try:
+        if CONFIG['clear_modifiers']:
+            subprocess.run(
+                ["xdotool", "keyup",
+                 "Control_L", "Control_R", "Shift_L", "Shift_R",
+                 "Alt_L", "Alt_R", "Super_L", "Super_R"],
+                check=False, capture_output=True, timeout=5,
+            )
+            time.sleep(0.05)
+
+        subprocess.run(
+            ["xdotool", "key", "--clearmodifiers", combo],
+            check=True, capture_output=True, text=True, timeout=5,
+        )
+        return True
+    except subprocess.TimeoutExpired:
+        _send_notification_static("❌ Dictation Error", "Paste keystroke timed out", urgency="critical")
+        return False
+    except FileNotFoundError:
+        _send_notification_static("❌ Dictation Error", "xdotool not installed. Install with: sudo pacman -S xdotool", urgency="critical")
+        return False
+    except subprocess.CalledProcessError as e:
+        error_msg = e.stderr if e.stderr else "Unknown error"
+        _send_notification_static("❌ Dictation Error", f"Paste keystroke failed: {error_msg}", urgency="critical")
         return False
 
 
@@ -874,7 +950,42 @@ def handle_toggle():
             paste_method = CONFIG.get('paste_method', 'xdotool')
             xdotool_success = False
             clipboard_success = False
-            
+
+            # Handle paste_method = "clipboard_key" - copy to clipboard and send a
+            # paste keystroke (atomic; avoids per-char xdotool `type` races).
+            if paste_method == 'clipboard_key':
+                if paste_text_clipboard_key(text):
+                    _send_notification_static(
+                        "✅ Dictation",
+                        f"Done! Pasted {word_count} words",
+                        urgency="normal",
+                    )
+                    keystroke_success = True
+                else:
+                    # Paste keystroke failed; clipboard may still hold the text.
+                    keystroke_success = False
+                    clipboard_success = copy_to_clipboard(text)
+                    if clipboard_success:
+                        _send_notification_static(
+                            "⚠️ Dictation",
+                            f"Paste keystroke failed, text in clipboard ({word_count} words)\nPaste manually with Ctrl+V / Ctrl+Shift+V",
+                            urgency="normal",
+                        )
+                    else:
+                        preview = text[:100] + ("..." if len(text) > 100 else "")
+                        _send_notification_static(
+                            "❌ Dictation Error",
+                            f"Could not paste or copy to clipboard.\nText: {preview}",
+                            urgency="critical",
+                        )
+                cleanup_stale_lock()
+                if not CONFIG.get('keep_temp', False) and Path(audio_file).exists():
+                    try:
+                        Path(audio_file).unlink()
+                    except Exception as e:
+                        print(f"Warning: Could not delete audio file: {e}", file=sys.stderr)
+                return 0 if (keystroke_success or clipboard_success) else 1
+
             # Handle paste_method = "both" - copy to clipboard first, then type
             if paste_method in ('both', 'clipboard'):
                 clipboard_success = copy_to_clipboard(text)

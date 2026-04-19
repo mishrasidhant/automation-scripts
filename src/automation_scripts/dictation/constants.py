@@ -82,13 +82,22 @@ DEFAULT_AUDIO_FORMAT = 'wav'
 # Text Injection Configuration Defaults
 # =============================================================================
 
-# Text injection method: 'xdotool', 'clipboard', 'both'
+# Text injection method: 'xdotool', 'clipboard', 'both', 'clipboard_key'
+# - xdotool:       type character-by-character (slow, can race with focus changes)
+# - clipboard:     copy to clipboard only; user pastes manually
+# - both:          copy to clipboard AND type via xdotool
+# - clipboard_key: copy to clipboard, then synthesize a paste keystroke (atomic)
 DEFAULT_PASTE_METHOD = 'clipboard'
 
 # Delay in milliseconds between keystrokes when typing
 # Lower = faster typing, but may cause issues
 # Higher = slower but more reliable
 DEFAULT_TYPING_DELAY = 5
+
+# Paste keystroke used by the 'clipboard_key' method.
+# - 'auto': detect focused window class; ctrl+shift+v for terminals, ctrl+v otherwise
+# - explicit combo accepted by `xdotool key` (e.g. 'ctrl+v', 'ctrl+shift+v', 'shift+Insert')
+DEFAULT_PASTE_KEY = 'auto'
 
 # Post-processing options
 DEFAULT_AUTO_CAPITALIZE = False
@@ -199,6 +208,7 @@ ENV_VAR_MAPPING = {
     
     # Text injection
     f'{ENV_VAR_PREFIX}PASTE_METHOD': ('text', 'paste_method'),
+    f'{ENV_VAR_PREFIX}PASTE_KEY': ('text', 'paste_key'),
     f'{ENV_VAR_PREFIX}TYPING_DELAY': ('text', 'typing_delay'),
     f'{ENV_VAR_PREFIX}AUTO_CAPITALIZE': ('text', 'auto_capitalize'),
     
@@ -233,6 +243,7 @@ DEFAULT_CONFIG = {
     },
     'text': {
         'paste_method': DEFAULT_PASTE_METHOD,
+        'paste_key': DEFAULT_PASTE_KEY,
         'typing_delay': DEFAULT_TYPING_DELAY,
         'auto_capitalize': DEFAULT_AUTO_CAPITALIZE,
         'strip_spaces': DEFAULT_STRIP_SPACES,
